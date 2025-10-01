@@ -11,5 +11,6 @@ import { User } from '../users/user.entity';
     imports: [TypeOrmModule.forFeature([Recipe, RecipeIngredient, RecipeStep, User])],
     controllers: [RecipesController],
     providers: [RecipesService],
+    exports: [RecipesService] 
 })
 export class RecipesModule {}
