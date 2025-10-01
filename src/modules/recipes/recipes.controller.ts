@@ -2,6 +2,8 @@ import { Controller, Get, Post, Body, Query, Param, ParseUUIDPipe } from '@nestj
 import { RecipesService } from './recipes.service';
 import { CreateRecipeDto } from './dto/create-recipe.dto';
 import { ApiTags, ApiQuery, ApiParam } from '@nestjs/swagger';
+import { Put } from '@nestjs/common';
+import { UpdateRecipeDto } from './dto/update-recipe.dto';
 
 @ApiTags('recipes')
 @Controller('recipes')
@@ -38,5 +40,13 @@ export class RecipesController {
     @Post()
     create(@Body() dto: CreateRecipeDto) {
         return this.service.create(dto);
+    }
+
+    @Put(':id')
+    update(
+        @Param('id', new ParseUUIDPipe()) id: string,
+        @Body() dto: UpdateRecipeDto,
+    ) {
+        return this.service.update(id, dto);
     }
 }
