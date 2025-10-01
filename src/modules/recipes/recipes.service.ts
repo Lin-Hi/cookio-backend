@@ -1,11 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, ILike, Repository } from 'typeorm';
 import { Recipe } from './entities/recipe.entity';
 import { RecipeIngredient } from './entities/recipe-ingredient.entity';
 import { RecipeStep } from './entities/recipe-step.entity';
 import { CreateRecipeDto } from './dto/create-recipe.dto';
 import { User } from '../users/user.entity';
+
+type FindAllParams = {
+    q?: string;
+    category?: string;
+    difficulty?: string;
+    ownerId?: string;
+    page: number;
+    pageSize: number;
+};
 
 @Injectable()
 export class RecipesService {
@@ -17,12 +26,35 @@ export class RecipesService {
         @InjectRepository(User) private readonly userRepo: Repository<User>,
     ) {}
 
-    async findAll() {
-        return this.recipeRepo.find({
+    async findAll(params: FindAllParams) {
+        const { q, category, difficulty, ownerId, page, pageSize } = params;
+        const where: any = {};
+        if (q) where.title = ILike(`%${q}%`);
+        if (category) where.category = category;
+        if (difficulty) where.difficulty = difficulty;
+        if (ownerId) where.owner = { id: ownerId };
+
+        const [items, total] = await this.recipeRepo.findAndCount({
+            where,
             relations: { owner: true },
             order: { created_at: 'DESC' },
-            take: 50,
+            skip: (page - 1) * pageSize,
+            take: pageSize,
         });
+
+        return { items, total, page, pageSize };
+    }
+
+    async findOne(id: string) {
+        const recipe = await this.recipeRepo.findOneOrFail({
+            where: { id },
+            relations: { owner: true },
+        });
+        const [ingredients, steps] = await Promise.all([
+            this.ingRepo.find({ where: { recipe: { id } }, order: { position: 'ASC' } }),
+            this.stepRepo.find({ where: { recipe: { id } }, order: { step_no: 'ASC' } }),
+        ]);
+        return { ...recipe, ingredients, steps };
     }
 
     async create(dto: CreateRecipeDto) {
@@ -60,7 +92,7 @@ export class RecipesService {
                 await manager.save(steps);
             }
 
-            return recipe;
+            return this.findOne(recipe.id);
         });
     }
 }
