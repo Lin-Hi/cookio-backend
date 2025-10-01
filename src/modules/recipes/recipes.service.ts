@@ -76,24 +76,44 @@ export class RecipesService {
             await manager.save(recipe);
 
             if (dto.ingredients?.length) {
-                const ingredients = dto.ingredients.map((i) =>
+                const ingredients = dto.ingredients.map((i, idx) =>
                     manager.create(RecipeIngredient, {
-                        recipe, name: i.name, quantity: i.quantity, unit: i.unit, position: i.position ?? 0,
+                        recipe,
+                        name: i.name,
+                        quantity: i.quantity,
+                        unit: i.unit,
+                        position: typeof i.position === 'number' ? i.position : idx,
                     }),
                 );
-                await manager.save(ingredients);
+                if (ingredients.length) await manager.save(ingredients);
             }
 
             if (dto.steps?.length) {
                 const steps = dto.steps.map((s) =>
                     manager.create(RecipeStep, {
-                        recipe, step_no: s.step_no, content: s.content, image_url: s.image_url,
+                        recipe,
+                        step_no: s.step_no,
+                        content: s.content,
+                        image_url: s.image_url,
                     }),
                 );
-                await manager.save(steps);
+                if (steps.length) await manager.save(steps);
             }
 
-            return this.findOne(recipe.id);
+            // assemble response within the same transaction
+            const [ingredients, steps] = await Promise.all([
+                manager.find(RecipeIngredient, {
+                    where: { recipe: { id: recipe.id } },
+                    order: { position: 'ASC' },
+                }),
+                manager.find(RecipeStep, {
+                    where: { recipe: { id: recipe.id } },
+                    order: { step_no: 'ASC' },
+                }),
+            ]);
+
+            // "owner" is already loaded variable above
+            return { ...recipe, owner, ingredients, steps };
         });
     }
 
@@ -104,12 +124,11 @@ export class RecipesService {
     // This approach is idempotent and easy to reason about on the client (full replace).
     async update(id: string, dto: UpdateRecipeDto) {
         return this.dataSource.transaction(async (manager) => {
-            // 1) Load existing recipe (with owner just for consistency)
-            const recipe = await manager.findOne(Recipe, { where: { id }, relations: { owner: true } });
+            const recipe = await manager.findOne(Recipe, { where: { id } });
             if (!recipe) throw new Error('Recipe not found');
 
-            // 2) Patch basic fields if present
-            const patch: Partial<Recipe> = {
+            // Patch base fields
+            manager.merge(Recipe, recipe, {
                 title: dto.title ?? recipe.title,
                 description: dto.description ?? recipe.description,
                 image_url: dto.image_url ?? recipe.image_url,
@@ -118,35 +137,28 @@ export class RecipesService {
                 cook_time: dto.cook_time ?? recipe.cook_time,
                 servings: dto.servings ?? recipe.servings,
                 is_published: dto.is_published ?? recipe.is_published,
-            };
-            manager.merge(Recipe, recipe, patch);
+            });
             await manager.save(recipe);
 
-            // 3) Replace ingredients if provided
+            // Replace ingredients
             if (Array.isArray(dto.ingredients)) {
                 await manager.delete(RecipeIngredient, { recipe: { id: recipe.id } });
-
-                const normIngredients = dto.ingredients.map((i, idx) =>
+                const newIngredients = dto.ingredients.map((i, idx) =>
                     manager.create(RecipeIngredient, {
                         recipe,
                         name: i.name,
                         quantity: i.quantity,
                         unit: i.unit,
-                        // If position is not given, keep array order 0..n
-                        position: typeof i.position === 'number' ? i.position : idx,
+                        position: i.position ?? idx,
                     }),
                 );
-                if (normIngredients.length) {
-                    await manager.save(normIngredients);
-                }
+                if (newIngredients.length) await manager.save(newIngredients);
             }
 
-            // 4) Replace steps if provided
+            // Replace steps
             if (Array.isArray(dto.steps)) {
                 await manager.delete(RecipeStep, { recipe: { id: recipe.id } });
-
-                // Ensure step_no is 1..n by client, otherwise we can normalize here
-                const normSteps = dto.steps.map((s) =>
+                const newSteps = dto.steps.map((s) =>
                     manager.create(RecipeStep, {
                         recipe,
                         step_no: s.step_no,
@@ -154,17 +166,23 @@ export class RecipesService {
                         image_url: s.image_url,
                     }),
                 );
-                if (normSteps.length) {
-                    await manager.save(normSteps);
-                }
+                if (newSteps.length) await manager.save(newSteps);
             }
 
-            // 5) Return fresh snapshot with children
             const [ingredients, steps] = await Promise.all([
                 manager.find(RecipeIngredient, { where: { recipe: { id: recipe.id } }, order: { position: 'ASC' } }),
                 manager.find(RecipeStep, { where: { recipe: { id: recipe.id } }, order: { step_no: 'ASC' } }),
             ]);
             return { ...recipe, ingredients, steps };
+        });
+    }
+
+    async remove(id: string) {
+        return this.dataSource.transaction(async (manager) => {
+            const recipe = await manager.findOne(Recipe, { where: { id } });
+            if (!recipe) throw new Error('Recipe not found');
+            await manager.delete(Recipe, { id });
+            return { deleted: true };
         });
     }
 }
