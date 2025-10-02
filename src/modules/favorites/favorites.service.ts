@@ -15,19 +15,27 @@ export class FavoritesService {
     ) {}
 
 
-    async listByUser(userId: string): Promise<FavoriteResponseDto[]> {
-        const favorites = await this.repo.find({
+    async listByUser(userId: string, page = 1, limit = 10) {
+        const [favorites, total] = await this.repo.findAndCount({
             where: { user: { id: userId } },
             relations: ['recipe'],
             order: { created_at: 'DESC' },
+            skip: (page - 1) * limit,
+            take: limit,
         });
 
-        return favorites.map(f => ({
-            recipeId: f.recipe.id,
-            title: f.recipe.title,
-            favoritedAt: f.created_at,
-        }));
+        return {
+            total,
+            page,
+            limit,
+            data: favorites.map(f => ({
+                recipeId: f.recipe.id,
+                title: f.recipe.title,
+                favoritedAt: f.created_at,
+            })),
+        };
     }
+
 
     async add(userId: string, recipeId: string): Promise<FavoriteResponseDto> {
         const user = await this.userRepo.findOneByOrFail({ id: userId });
