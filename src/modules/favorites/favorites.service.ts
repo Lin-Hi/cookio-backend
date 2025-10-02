@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Favorite } from './favorite.entity';
 import { User } from '../users/user.entity';
 import { Recipe } from '../recipes/entities/recipe.entity';
+import { FavoriteResponseDto, FavoriteCheckDto, FavoriteCountDto } from './dto/favorite-response.dto';
 
 @Injectable()
 export class FavoritesService {
@@ -13,15 +14,22 @@ export class FavoritesService {
         @InjectRepository(Recipe) private readonly recipeRepo: Repository<Recipe>,
     ) {}
 
-    async listByUser(userId: string) {
-        return this.repo.find({
+
+    async listByUser(userId: string): Promise<FavoriteResponseDto[]> {
+        const favorites = await this.repo.find({
             where: { user: { id: userId } },
             relations: ['recipe'],
             order: { created_at: 'DESC' },
         });
+
+        return favorites.map(f => ({
+            recipeId: f.recipe.id,
+            title: f.recipe.title,
+            favoritedAt: f.created_at,
+        }));
     }
 
-    async add(userId: string, recipeId: string) {
+    async add(userId: string, recipeId: string): Promise<FavoriteResponseDto> {
         const user = await this.userRepo.findOneByOrFail({ id: userId });
         const recipe = await this.recipeRepo.findOneByOrFail({ id: recipeId });
 
@@ -33,7 +41,13 @@ export class FavoritesService {
         }
 
         const fav = this.repo.create({ user, recipe });
-        return this.repo.save(fav);
+        const saved = await this.repo.save(fav);
+
+        return {
+            recipeId: recipe.id,
+            title: recipe.title,
+            favoritedAt: saved.created_at,
+        };
     }
 
     async remove(userId: string, recipeId: string) {
@@ -47,14 +61,14 @@ export class FavoritesService {
         return { deleted: true };
     }
 
-    async isFavorite(userId: string, recipeId: string) {
+    async isFavorite(userId: string, recipeId: string): Promise<FavoriteCheckDto> {
         const fav = await this.repo.findOne({
             where: { user: { id: userId }, recipe: { id: recipeId } },
         });
         return { isFavorite: !!fav };
     }
 
-    async countFavorites(recipeId: string) {
+    async countFavorites(recipeId: string): Promise<FavoriteCountDto> {
         const count = await this.repo.count({
             where: { recipe: { id: recipeId } },
         });
