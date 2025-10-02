@@ -9,6 +9,7 @@ import { RedisProvider } from './redis.provider';
 import { UsersModule } from './modules/users/users.module';
 import { RecipesModule } from './modules/recipes/recipes.module';
 import { User } from './modules/users/user.entity';
+import {FavoritesModule} from "./modules/favorites/favorites.module";
 
 @Module({
     imports: [
@@ -24,9 +25,9 @@ import { User } from './modules/users/user.entity';
             synchronize: true, // dev only
         }),
         TypeOrmModule.forFeature([User]),
-
         UsersModule,
         RecipesModule,
+        FavoritesModule
     ],
     controllers: [AppController],
     providers: [AppService, RedisProvider],
