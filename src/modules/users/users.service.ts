@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import * as bcrypt from 'bcryptjs';
 import { User } from './user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -13,9 +14,23 @@ export class UsersService {
 
     async create(dto: CreateUserDto) {
         const exist = await this.repo.findOne({ where: { email: dto.email } });
-        if (exist) return exist;
-        const u = this.repo.create(dto);
-        return this.repo.save(u);
+        if (exist) {
+            throw new ConflictException('该邮箱已被注册');
+        }
+        
+        // 加密密码
+        const hashedPassword = await bcrypt.hash(dto.password, 12);
+        
+        const u = this.repo.create({
+            ...dto,
+            password: hashedPassword,
+        });
+        
+        const savedUser = await this.repo.save(u);
+        
+        // 返回时排除密码
+        const { password, ...userWithoutPassword } = savedUser;
+        return userWithoutPassword;
     }
 
     findAll() {

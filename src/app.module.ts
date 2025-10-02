@@ -8,6 +8,7 @@ import { RedisProvider } from './redis.provider';
 
 import { UsersModule } from './modules/users/users.module';
 import { RecipesModule } from './modules/recipes/recipes.module';
+import { AuthModule } from './modules/auth/auth.module';
 import { User } from './modules/users/user.entity';
 
 @Module({
@@ -25,6 +26,7 @@ import { User } from './modules/users/user.entity';
         }),
         TypeOrmModule.forFeature([User]),
 
+        AuthModule,
         UsersModule,
         RecipesModule,
     ],

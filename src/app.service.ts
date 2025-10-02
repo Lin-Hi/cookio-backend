@@ -25,6 +25,7 @@ export class AppService {
             user = this.userRepo.create({
                 email: DEMO_EMAIL,
                 display_name: 'Demo User',
+                password: '123456',
             });
             user = await this.userRepo.save(user);
         }
