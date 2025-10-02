@@ -27,4 +27,17 @@ export class FavoritesController {
     ) {
         return this.service.remove(userId, recipeId);
     }
+
+    @Get(':userId/:recipeId')
+    isFavorite(
+        @Param('userId', new ParseUUIDPipe()) userId: string,
+        @Param('recipeId', new ParseUUIDPipe()) recipeId: string,
+    ) {
+        return this.service.isFavorite(userId, recipeId);
+    }
+
+    @Get('recipe/:recipeId/count')
+    count(@Param('recipeId', new ParseUUIDPipe()) recipeId: string) {
+        return this.service.countFavorites(recipeId);
+    }
 }

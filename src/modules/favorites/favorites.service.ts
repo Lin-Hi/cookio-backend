@@ -37,4 +37,18 @@ export class FavoritesService {
         await this.repo.remove(fav);
         return { deleted: true };
     }
+
+    async isFavorite(userId: string, recipeId: string) {
+        const fav = await this.repo.findOne({
+            where: { user: { id: userId }, recipe: { id: recipeId } },
+        });
+        return { isFavorite: !!fav };
+    }
+
+    async countFavorites(recipeId: string) {
+        const count = await this.repo.count({
+            where: { recipe: { id: recipeId } },
+        });
+        return { recipeId, count };
+    }
 }
