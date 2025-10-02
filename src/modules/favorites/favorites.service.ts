@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Favorite } from './favorite.entity';
@@ -24,16 +24,25 @@ export class FavoritesService {
     async add(userId: string, recipeId: string) {
         const user = await this.userRepo.findOneByOrFail({ id: userId });
         const recipe = await this.recipeRepo.findOneByOrFail({ id: recipeId });
-        const fav = this.repo.create({ user, recipe });
-        return this.repo.save(fav).catch(() => {
-            throw new Error('Already in favorites');
+
+        const existing = await this.repo.findOne({
+            where: { user: { id: userId }, recipe: { id: recipeId } },
         });
+        if (existing) {
+            throw new ConflictException('Recipe already in favorites');
+        }
+
+        const fav = this.repo.create({ user, recipe });
+        return this.repo.save(fav);
     }
 
     async remove(userId: string, recipeId: string) {
-        const fav = await this.repo.findOneOrFail({
+        const fav = await this.repo.findOne({
             where: { user: { id: userId }, recipe: { id: recipeId } },
         });
+        if (!fav) {
+            throw new NotFoundException('Favorite not found');
+        }
         await this.repo.remove(fav);
         return { deleted: true };
     }
