@@ -1,8 +1,8 @@
-import {Inject, Injectable} from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Redis } from 'ioredis';
-import { User } from './user.entity';
-import {InjectRepository} from "@nestjs/typeorm";
+import { User } from './modules/users/user.entity';
 
 @Injectable()
 export class AppService {
@@ -15,22 +15,24 @@ export class AppService {
     ) {}
 
     async getHello(): Promise<string> {
-        // 确保数据库里有一个 user
-        const existing = await this.userRepo.findOne({ where: { userId: '123456' } });
-        if (!existing) {
-            const user = this.userRepo.create({ userId: '123456' });
-            await this.userRepo.save(user);
+        const DEMO_EMAIL = 'demo@cookio.app';
+
+        // ensure there is a demo user in the database (by email)
+        let user = await this.userRepo.findOne({ where: { email: DEMO_EMAIL } });
+        if (!user) {
+            user = this.userRepo.create({
+                email: DEMO_EMAIL,
+                display_name: 'Demo User',
+            });
+            user = await this.userRepo.save(user);
         }
 
-        // 从数据库读取
-        const user = await this.userRepo.findOne({ where: { userId: '123456' } });
+        // write to Redis
+        await this.redis.set('lastUserEmail', user.email);
 
-        // 同时写一份缓存
-        await this.redis.set('lastUser', user?.userId ?? 'none');
+        const cached = await this.redis.get('lastUserEmail');
 
-        // 从 Redis 取回验证
-        const cached = await this.redis.get('lastUser');
-
-        return `Hello User with ID: ${user?.userId} (cached: ${cached})`;
+        // return string with user id and cached email
+        return `Hello User ${user.display_name ?? user.email} (id: ${user.id}, cached: ${cached})`;
     }
 }

@@ -13,4 +13,4 @@ COPY --from=builder /app/dist ./dist
 COPY package*.json ./
 RUN npm install --omit=dev
 CMD ["node", "dist/main.js"]
-EXPOSE 3000
+EXPOSE 8080

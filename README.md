@@ -13,7 +13,7 @@
 
 ```
 src/
-├── main.ts                # 应用入口，创建 Nest 应用并监听 3000 端口
+├── main.ts                # 应用入口，创建 Nest 应用并监听 8080 端口
 ├── app.module.ts          # 根模块：加载 TypeORM（PostgreSQL），注册 Redis Provider、Controller/Service
 ├── app.controller.ts      # 控制器：定义 GET / 路由，调用 AppService
 ├── app.service.ts         # 业务逻辑：确保 users 表存在 123456，读写 Redis，并返回字符串
@@ -90,7 +90,7 @@ npm run start:dev
 
 ### E. 访问与验证
 
-* 打开：[http://localhost:3000](http://localhost:3000)
+* 打开：[http://localhost:8080](http://localhost:8080)
 * 预期返回：
 
   ```
