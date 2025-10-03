@@ -299,7 +299,9 @@ GET /users/{id}/recipes
         "id": "user-uuid",
         "email": "user@example.com",
         "display_name": "张三"
-      }
+      },
+      "ingredients": ["500 g 五花肉", "2 勺 生抽"],
+      "steps": ["将五花肉切块", "热锅下油，煎至两面金黄"]
     }
   ],
   "total": 1,

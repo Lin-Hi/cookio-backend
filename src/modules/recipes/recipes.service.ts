@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, ILike, Repository } from 'typeorm';
+import { DataSource, ILike, In, Repository } from 'typeorm';
 import { Recipe } from './entities/recipe.entity';
 import { RecipeIngredient } from './entities/recipe-ingredient.entity';
 import { RecipeStep } from './entities/recipe-step.entity';
@@ -43,7 +43,59 @@ export class RecipesService {
             take: pageSize,
         });
 
-        return { items, total, page, pageSize };
+        if (items.length === 0) {
+            return { items: [], total, page, pageSize };
+        }
+
+        const recipeIds = items.map((r) => r.id);
+
+        const [allIngredients, allSteps] = await Promise.all([
+            this.ingRepo.find({
+                where: { recipe: { id: In(recipeIds) } },
+                order: { position: 'ASC' },
+                relations: { recipe: true },
+            }),
+            this.stepRepo.find({
+                where: { recipe: { id: In(recipeIds) } },
+                order: { step_no: 'ASC' },
+                relations: { recipe: true },
+            }),
+        ]);
+
+        const ingredientsByRecipeId = new Map<string, any[]>();
+        for (const ing of allIngredients) {
+            const rid = (ing as any).recipe.id as string;
+            const arr = ingredientsByRecipeId.get(rid) ?? [];
+            arr.push({
+                id: (ing as any).id,
+                name: ing.name,
+                quantity: ing.quantity,
+                unit: ing.unit,
+                position: (ing as any).position,
+            });
+            ingredientsByRecipeId.set(rid, arr);
+        }
+
+        const stepsByRecipeId = new Map<string, any[]>();
+        for (const st of allSteps) {
+            const rid = (st as any).recipe.id as string;
+            const arr = stepsByRecipeId.get(rid) ?? [];
+            arr.push({
+                id: (st as any).id,
+                step_no: (st as any).step_no,
+                content: st.content,
+                image_url: (st as any).image_url,
+            });
+            stepsByRecipeId.set(rid, arr);
+        }
+
+        const mapped = items.map((r) => ({
+            ...r,
+            ingredients: ingredientsByRecipeId.get(r.id) ?? [],
+            steps: stepsByRecipeId.get(r.id) ?? [],
+        }));
+
+        return { items: mapped, total, page, pageSize };
     }
 
     async findOne(id: string) {
@@ -55,6 +107,7 @@ export class RecipesService {
             this.ingRepo.find({ where: { recipe: { id } }, order: { position: 'ASC' } }),
             this.stepRepo.find({ where: { recipe: { id } }, order: { step_no: 'ASC' } }),
         ]);
+
         return { ...recipe, ingredients, steps };
     }
 
