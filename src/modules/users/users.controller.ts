@@ -3,14 +3,14 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ApiTags, ApiParam, ApiQuery } from '@nestjs/swagger';
-import { RecipesService } from '../recipes/recipes.service'; // <-- inject
+import { RecipesService } from '../recipes/recipes.service';
 
 @ApiTags('users')
 @Controller('users')
 export class UsersController {
     constructor(
         private readonly service: UsersService,
-        private readonly recipesService: RecipesService, // <-- inject service
+        private readonly recipesService: RecipesService,
     ) {}
 
     @Get()

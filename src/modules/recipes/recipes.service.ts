@@ -107,7 +107,6 @@ export class RecipesService {
             this.ingRepo.find({ where: { recipe: { id } }, order: { position: 'ASC' } }),
             this.stepRepo.find({ where: { recipe: { id } }, order: { step_no: 'ASC' } }),
         ]);
-
         return { ...recipe, ingredients, steps };
     }
 
