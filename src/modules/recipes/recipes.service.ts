@@ -7,6 +7,7 @@ import { RecipeStep } from './entities/recipe-step.entity';
 import { CreateRecipeDto } from './dto/create-recipe.dto';
 import { UpdateRecipeDto } from './dto/update-recipe.dto';
 import { User } from '../users/user.entity';
+import { ReviewsService } from '../reviews/reviews.service';
 
 type FindAllParams = {
     q?: string;
@@ -25,6 +26,7 @@ export class RecipesService {
         @InjectRepository(RecipeIngredient) private readonly ingRepo: Repository<RecipeIngredient>,
         @InjectRepository(RecipeStep) private readonly stepRepo: Repository<RecipeStep>,
         @InjectRepository(User) private readonly userRepo: Repository<User>,
+        private readonly reviewsService: ReviewsService,
     ) {}
 
     async findAll(params: FindAllParams) {
@@ -103,12 +105,25 @@ export class RecipesService {
             where: { id },
             relations: { owner: true },
         });
+
         const [ingredients, steps] = await Promise.all([
             this.ingRepo.find({ where: { recipe: { id } }, order: { position: 'ASC' } }),
             this.stepRepo.find({ where: { recipe: { id } }, order: { step_no: 'ASC' } }),
         ]);
-        return { ...recipe, ingredients, steps };
+
+        const { avgRating, reviewsCount } = await this.reviewsService.summary(id);
+
+        return {
+            ...recipe,
+            ingredients,
+            steps,
+            ratingSummary: {
+                average: avgRating,
+                count: reviewsCount,
+            },
+        };
     }
+
 
     async create(dto: CreateRecipeDto) {
         return this.dataSource.transaction(async (manager) => {
