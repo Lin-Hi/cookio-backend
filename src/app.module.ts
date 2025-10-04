@@ -10,6 +10,7 @@ import { UsersModule } from './modules/users/users.module';
 import { RecipesModule } from './modules/recipes/recipes.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { User } from './modules/users/user.entity';
+import {FavoritesModule} from "./modules/favorites/favorites.module";
 
 @Module({
     imports: [
@@ -28,6 +29,7 @@ import { User } from './modules/users/user.entity';
         AuthModule,
         UsersModule,
         RecipesModule,
+        FavoritesModule
     ],
     controllers: [AppController],
     providers: [AppService, RedisProvider],
