@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, HttpException, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiQuery, ApiOperation } from '@nestjs/swagger';
 import { PublicRecipeService } from './publicRecipe.service';
 import { PublicRecipeQueryDto } from './dto/public-recipe-query.dto';
@@ -20,6 +20,39 @@ export class PublicRecipeController {
     @ApiQuery({ name: 'pageSize', required: false, description: '每页数量，默认 20' })
     searchPublicRecipes(@Query() query: PublicRecipeQueryDto) {
         return this.publicRecipeService.searchPublicRecipes(query);
+    }
+
+    @Get('steps')
+    @ApiOperation({ 
+        summary: '获取菜谱步骤', 
+        description: '从 Spoonacular API 提取指定 URL 的菜谱步骤' 
+    })
+    @ApiQuery({ 
+        name: 'recipeUrl', 
+        required: true, 
+        description: '菜谱原始 URL，例如 "https://www.seriouseats.com/chicken-recipe"' 
+    })
+    @ApiQuery({ 
+        name: 'recipeId', 
+        required: false, 
+        description: '菜谱 ID（可选）' 
+    })
+    async getRecipeSteps(
+        @Query('recipeUrl') recipeUrl: string,
+        @Query('recipeId') recipeId?: string
+    ) {
+        if (!recipeUrl) {
+            throw new HttpException('recipeUrl 参数是必需的', HttpStatus.BAD_REQUEST);
+        }
+
+        const steps = await this.publicRecipeService.fetchRecipeSteps(recipeUrl, recipeId);
+        
+        return {
+            recipeUrl,
+            recipeId: recipeId || null,
+            steps,
+            total: steps.length,
+        };
     }
 }
 

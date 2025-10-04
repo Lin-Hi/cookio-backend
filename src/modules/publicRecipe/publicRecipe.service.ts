@@ -60,7 +60,7 @@ export class PublicRecipeService {
     private readonly EDAMAM_APP_ID = '34930e1e';
     private readonly EDAMAM_APP_KEY = '384dedda7dd0e2979b3ba2316ee4b704';
     private readonly EDAMAM_BASE_URL = 'https://api.edamam.com/api/recipes/v2';
-    private readonly SPOONACULAR_API_KEY = '4364dbc551284eceb8ceaa815db7c340';
+    private readonly SPOONACULAR_API_KEY = '680da435be754ceaa046bb1a3be1e563';
     private readonly SPOONACULAR_BASE_URL = 'https://api.spoonacular.com';
 
     /**
@@ -110,10 +110,8 @@ export class PublicRecipeService {
                 timeout: 10000,
             });
 
-            // 转换为统一格式（并行调用 Spoonacular API）
-            const items = await Promise.all(
-                response.data.hits.map((hit) => this.transformRecipe(hit.recipe))
-            );
+            // 转换为统一格式
+            const items = response.data.hits.map((hit) => this.transformRecipe(hit.recipe));
 
             return {
                 items,
@@ -137,7 +135,7 @@ export class PublicRecipeService {
     /**
      * 将 Edamam 菜谱格式转换为统一的返回格式
      */
-    private async transformRecipe(edamamRecipe: EdamamRecipe) {
+    private transformRecipe(edamamRecipe: EdamamRecipe) {
         // 从 URI 中提取 ID
         const recipeId = edamamRecipe.uri.split('#recipe_')[1] || edamamRecipe.uri;
 
@@ -155,9 +153,6 @@ export class PublicRecipeService {
             unit: ing.measure || '',
             position: index,
         }));
-
-        // 从 Spoonacular API 获取真正的烹饪步骤
-        const steps = await this.fetchRecipeSteps(edamamRecipe.url, recipeId);
 
         // 格式化烹饪时间
         const cookTime = this.formatCookTime(edamamRecipe.totalTime);
@@ -182,8 +177,6 @@ export class PublicRecipeService {
                 display_name: edamamRecipe.source,
             },
             ingredients,
-            steps,
-            // 额外的元数据
             external_url: edamamRecipe.url,
             calories: Math.round(edamamRecipe.calories),
             totalWeight: Math.round(edamamRecipe.totalWeight),
@@ -193,9 +186,11 @@ export class PublicRecipeService {
     }
 
     /**
-     * 从 Spoonacular API 获取菜谱步骤
+     * 从 Spoonacular API 获取菜谱步骤（公开方法）
      */
-    private async fetchRecipeSteps(recipeUrl: string, recipeId: string) {
+    async fetchRecipeSteps(recipeUrl: string, recipeId?: string) {
+        // 如果没有提供 recipeId，生成一个临时的
+        const id = recipeId || 'recipe';
         try {
             const response = await axios.get<SpoonacularRecipeResponse>(
                 `${this.SPOONACULAR_BASE_URL}/recipes/extract`,
@@ -219,7 +214,7 @@ export class PublicRecipeService {
                 );
 
                 return allSteps.map((step) => ({
-                    id: `${recipeId}-step-${step.number}`,
+                    id: `${id}-step-${step.number}`,
                     step_no: step.number,
                     content: step.step,
                     image_url: null,
