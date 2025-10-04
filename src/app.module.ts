@@ -11,6 +11,7 @@ import { RecipesModule } from './modules/recipes/recipes.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { User } from './modules/users/user.entity';
 import { PublicRecipeModule } from './modules/publicRecipe/publicRecipe.module';
+import {FavoritesModule} from "./modules/favorites/favorites.module";
 
 @Module({
     imports: [
@@ -30,6 +31,7 @@ import { PublicRecipeModule } from './modules/publicRecipe/publicRecipe.module';
         UsersModule,
         RecipesModule,
         PublicRecipeModule,
+        FavoritesModule
     ],
     controllers: [AppController],
     providers: [AppService, RedisProvider],
