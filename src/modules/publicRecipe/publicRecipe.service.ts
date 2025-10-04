@@ -39,11 +39,29 @@ interface EdamamResponse {
     }>;
 }
 
+interface SpoonacularStep {
+    number: number;
+    step: string;
+    ingredients: any[];
+    equipment: any[];
+}
+
+interface SpoonacularAnalyzedInstruction {
+    name: string;
+    steps: SpoonacularStep[];
+}
+
+interface SpoonacularRecipeResponse {
+    analyzedInstructions: SpoonacularAnalyzedInstruction[];
+}
+
 @Injectable()
 export class PublicRecipeService {
     private readonly EDAMAM_APP_ID = '34930e1e';
     private readonly EDAMAM_APP_KEY = '384dedda7dd0e2979b3ba2316ee4b704';
     private readonly EDAMAM_BASE_URL = 'https://api.edamam.com/api/recipes/v2';
+    private readonly SPOONACULAR_API_KEY = '4364dbc551284eceb8ceaa815db7c340';
+    private readonly SPOONACULAR_BASE_URL = 'https://api.spoonacular.com';
 
     /**
      * 搜索 Edamam 公共菜谱并转换为统一格式
@@ -92,8 +110,10 @@ export class PublicRecipeService {
                 timeout: 10000,
             });
 
-            // 转换为统一格式
-            const items = response.data.hits.map((hit) => this.transformRecipe(hit.recipe));
+            // 转换为统一格式（并行调用 Spoonacular API）
+            const items = await Promise.all(
+                response.data.hits.map((hit) => this.transformRecipe(hit.recipe))
+            );
 
             return {
                 items,
@@ -117,7 +137,7 @@ export class PublicRecipeService {
     /**
      * 将 Edamam 菜谱格式转换为统一的返回格式
      */
-    private transformRecipe(edamamRecipe: EdamamRecipe) {
+    private async transformRecipe(edamamRecipe: EdamamRecipe) {
         // 从 URI 中提取 ID
         const recipeId = edamamRecipe.uri.split('#recipe_')[1] || edamamRecipe.uri;
 
@@ -136,13 +156,8 @@ export class PublicRecipeService {
             position: index,
         }));
 
-        // 转换步骤 - 返回全部步骤（使用 ingredientLines）
-        const steps = edamamRecipe.ingredientLines.map((line, index) => ({
-            id: `${recipeId}-step-${index}`,
-            step_no: index + 1,
-            content: line,
-            image_url: null,
-        }));
+        // 从 Spoonacular API 获取真正的烹饪步骤
+        const steps = await this.fetchRecipeSteps(edamamRecipe.url, recipeId);
 
         // 格式化烹饪时间
         const cookTime = this.formatCookTime(edamamRecipe.totalTime);
@@ -175,6 +190,49 @@ export class PublicRecipeService {
             dietLabels: edamamRecipe.dietLabels,
             healthLabels: edamamRecipe.healthLabels,
         };
+    }
+
+    /**
+     * 从 Spoonacular API 获取菜谱步骤
+     */
+    private async fetchRecipeSteps(recipeUrl: string, recipeId: string) {
+        try {
+            const response = await axios.get<SpoonacularRecipeResponse>(
+                `${this.SPOONACULAR_BASE_URL}/recipes/extract`,
+                {
+                    params: {
+                        url: recipeUrl,
+                        forceExtraction: true,
+                        analyze: false,
+                        includeNutrition: false,
+                        includeTaste: false,
+                        apiKey: this.SPOONACULAR_API_KEY,
+                    },
+                    timeout: 60000,
+                }
+            );
+
+            // 提取并转换步骤
+            if (response.data.analyzedInstructions && response.data.analyzedInstructions.length > 0) {
+                const allSteps = response.data.analyzedInstructions.flatMap(
+                    (instruction) => instruction.steps
+                );
+
+                return allSteps.map((step) => ({
+                    id: `${recipeId}-step-${step.number}`,
+                    step_no: step.number,
+                    content: step.step,
+                    image_url: null,
+                }));
+            }
+
+            // 如果没有步骤，返回空数组
+            return [];
+        } catch (error) {
+            // 如果 Spoonacular API 调用失败，返回空步骤数组
+            console.error('Failed to fetch steps from Spoonacular:', error);
+            return [];
+        }
     }
 
     /**
