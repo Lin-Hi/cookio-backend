@@ -133,4 +133,21 @@ export class ReviewsService {
         await this.repo.remove(rv);
         return { ok: true };
     }
+
+    /** Aggregate rating for a recipe */
+    async summary(recipeId: string) {
+        await this.mustGetRecipe(recipeId);
+        const stats = await this.repo
+            .createQueryBuilder('rv')
+            .select('AVG(rv.rating)', 'avg')
+            .addSelect('COUNT(*)', 'cnt')
+            .where('rv.recipeId = :recipeId', { recipeId })
+            .getRawOne<{ avg: string; cnt: string }>();
+
+        return {
+            recipeId,
+            avgRating: stats?.avg ? Number(parseFloat(stats.avg).toFixed(2)) : 0,
+            reviewsCount: Number(stats?.cnt ?? 0),
+        };
+    }
 }

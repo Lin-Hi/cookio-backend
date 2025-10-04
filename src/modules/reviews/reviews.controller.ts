@@ -50,4 +50,16 @@ export class ReviewsController {
     remove(@Param('id', new ParseUUIDPipe()) id: string, @Req() req: any) {
         return this.service.remove(id, req.user);
     }
+
+    @Get('recipes/:recipeId/reviews/summary')
+    @ApiOkResponse({
+        description: 'Average rating and reviews count of the recipe',
+        schema: {
+            example: { recipeId: 'uuid', avgRating: 4.5, reviewsCount: 12 },
+        },
+    })
+    summary(@Param('recipeId', new ParseUUIDPipe()) recipeId: string) {
+        return this.service.summary(recipeId);
+    }
+
 }
