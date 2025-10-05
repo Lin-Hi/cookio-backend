@@ -53,7 +53,9 @@ export class PantryService {
             unit: dto.unit ?? null,
             expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
         });
-        return this.pantryRepo.save(entity);
+        const expiresAt = dto.expiresAt ? new Date(dto.expiresAt) : null;
+
+        return this.pantryRepo.save({ user, name: dto.name, quantity: dto.quantity ?? null, unit: dto.unit ?? null, expiresAt });
     }
 
     async update(userId: string, itemId: string, dto: UpdatePantryItemDto) {

@@ -2,6 +2,7 @@ import { Controller, Get, Post, Put, Delete, Param, Body, Query, ParseUUIDPipe, 
 import { PantryService } from './pantry.service';
 import { CreatePantryItemDto } from './dto/create-pantry-item.dto';
 import { UpdatePantryItemDto } from './dto/update-pantry-item.dto';
+import { ListPantryQueryDto } from './dto/list-pantry.query';
 import { ApiTags, ApiOkResponse, ApiCreatedResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
@@ -20,19 +21,14 @@ export class PantryController {
     list(
         @Req() req: any,
         @Param('userId', new ParseUUIDPipe()) userId: string,
-        @Query('page') page = '1',
-        @Query('limit') limit = '10',
-        @Query('q') q?: string,
-        @Query('sortBy') sortBy?: 'createdAt'|'name'|'expiresAt',
-        @Query('order') order?: 'ASC'|'DESC',
-        @Query('expiringWithin') expiringWithin?: string,
+        @Query() query: ListPantryQueryDto,
     ) {
         this.ensureOwner(req, userId);
-        return this.service.list(userId, Number(page), Number(limit), {
-            q,
-            sortBy,
-            order,
-            expiringWithin: expiringWithin ? Number(expiringWithin) : undefined,
+        return this.service.list(userId, query.page, query.limit, {
+            q: query.q,
+            sortBy: query.sortBy,
+            order: query.order,
+            expiringWithin: query.expiringWithin,
         });
     }
 
