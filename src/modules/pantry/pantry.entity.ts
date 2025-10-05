@@ -2,7 +2,9 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, Up
 import { User } from '../users/user.entity';
 
 @Entity('pantry_items')
-@Index(['user'])
+@Index('idx_pantry_user', ['user'])
+@Index('idx_pantry_expires', ['expiresAt'])
+@Index('idx_pantry_name', ['name'])
 export class PantryItem {
     @PrimaryGeneratedColumn('uuid')
     id!: string;
