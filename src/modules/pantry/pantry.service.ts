@@ -13,15 +13,34 @@ export class PantryService {
         @InjectRepository(User) private readonly userRepo: Repository<User>,
     ) {}
 
-    async list(userId: string, page = 1, limit = 10) {
-        const [items, total] = await this.pantryRepo.findAndCount({
-            where: { user: { id: userId } },
-            order: { createdAt: 'DESC' },
-            skip: (page - 1) * limit,
-            take: limit,
-        });
+    async list(
+        userId: string,
+        page = 1,
+        limit = 10,
+        opts?: { q?: string; sortBy?: 'createdAt'|'name'|'expiresAt'; order?: 'ASC'|'DESC'; expiringWithin?: number }
+    ) {
+        const qb = this.pantryRepo.createQueryBuilder('p')
+            .where('p.userId = :userId', { userId });
+
+        if (opts?.q) {
+            qb.andWhere('LOWER(p.name) LIKE :q', { q: `%${opts.q.toLowerCase()}%` });
+        }
+        if (typeof opts?.expiringWithin === 'number') {
+            qb.andWhere('p.expiresAt IS NOT NULL AND p.expiresAt <= :deadline', {
+                deadline: new Date(Date.now() + opts.expiringWithin * 24 * 3600 * 1000),
+            });
+        }
+
+        const sortBy = opts?.sortBy ?? 'createdAt';
+        const order = opts?.order ?? 'DESC';
+        qb.orderBy(`p.${sortBy}`, order as 'ASC'|'DESC');
+
+        qb.skip((page - 1) * limit).take(limit);
+
+        const [items, total] = await qb.getManyAndCount();
         return { items, total, page, pageSize: limit };
     }
+
 
     async create(userId: string, dto: CreatePantryItemDto) {
         const user = await this.userRepo.findOne({ where: { id: userId } });

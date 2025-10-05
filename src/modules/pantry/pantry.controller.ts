@@ -17,16 +17,25 @@ export class PantryController {
     }
 
     @Get(':userId')
-    @ApiOkResponse({ description: 'List pantry items for a user with pagination.' })
     list(
         @Req() req: any,
         @Param('userId', new ParseUUIDPipe()) userId: string,
         @Query('page') page = '1',
         @Query('limit') limit = '10',
+        @Query('q') q?: string,
+        @Query('sortBy') sortBy?: 'createdAt'|'name'|'expiresAt',
+        @Query('order') order?: 'ASC'|'DESC',
+        @Query('expiringWithin') expiringWithin?: string,
     ) {
         this.ensureOwner(req, userId);
-        return this.service.list(userId, Number(page), Number(limit));
+        return this.service.list(userId, Number(page), Number(limit), {
+            q,
+            sortBy,
+            order,
+            expiringWithin: expiringWithin ? Number(expiringWithin) : undefined,
+        });
     }
+
 
     @Post(':userId/items')
     @ApiCreatedResponse({ description: 'Create a pantry item for a user.' })
