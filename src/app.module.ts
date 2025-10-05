@@ -10,6 +10,7 @@ import { UsersModule } from './modules/users/users.module';
 import { RecipesModule } from './modules/recipes/recipes.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { User } from './modules/users/user.entity';
+import { PublicRecipeModule } from './modules/publicRecipe/publicRecipe.module';
 import {FavoritesModule} from "./modules/favorites/favorites.module";
 import {ReviewsModule} from "./modules/reviews/reviews.module";
 import {PantryModule} from "./modules/pantry/pantry.module";
@@ -31,6 +32,7 @@ import {PantryModule} from "./modules/pantry/pantry.module";
         AuthModule,
         UsersModule,
         RecipesModule,
+        PublicRecipeModule,
         FavoritesModule,
         ReviewsModule,
         PantryModule
