@@ -46,6 +46,13 @@ export class FavoritesController {
         return this.service.remove(userId, recipeId);
     }
 
+    @Get('recipe/:recipeId/count')
+    @ApiParam({ name: 'recipeId', type: 'string', format: 'uuid' })
+    @ApiOkResponse({ type: FavoriteCountDto, description: 'Get number of favorites for a recipe' })
+    count(@Param('recipeId', new ParseUUIDPipe()) recipeId: string) {
+        return this.service.countFavorites(recipeId);
+    }
+
     @Get(':userId/:recipeId')
     @ApiParam({ name: 'userId', type: 'string', format: 'uuid' })
     @ApiParam({ name: 'recipeId', type: 'string', format: 'uuid' })
@@ -55,12 +62,5 @@ export class FavoritesController {
         @Param('recipeId', new ParseUUIDPipe()) recipeId: string,
     ) {
         return this.service.isFavorite(userId, recipeId);
-    }
-
-    @Get('recipe/:recipeId/count')
-    @ApiParam({ name: 'recipeId', type: 'string', format: 'uuid' })
-    @ApiOkResponse({ type: FavoriteCountDto, description: 'Get number of favorites for a recipe' })
-    count(@Param('recipeId', new ParseUUIDPipe()) recipeId: string) {
-        return this.service.countFavorites(recipeId);
     }
 }
