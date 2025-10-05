@@ -13,6 +13,7 @@ import { User } from './modules/users/user.entity';
 import { PublicRecipeModule } from './modules/publicRecipe/publicRecipe.module';
 import {FavoritesModule} from "./modules/favorites/favorites.module";
 import {ReviewsModule} from "./modules/reviews/reviews.module";
+import {PantryModule} from "./modules/pantry/pantry.module";
 
 @Module({
     imports: [
@@ -33,7 +34,8 @@ import {ReviewsModule} from "./modules/reviews/reviews.module";
         RecipesModule,
         PublicRecipeModule,
         FavoritesModule,
-        ReviewsModule
+        ReviewsModule,
+        PantryModule
     ],
     controllers: [AppController],
     providers: [AppService, RedisProvider],
