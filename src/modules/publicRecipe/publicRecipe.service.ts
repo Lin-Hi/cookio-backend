@@ -1,6 +1,12 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import axios from 'axios';
 import { PublicRecipeQueryDto } from './dto/public-recipe-query.dto';
+import {InjectRepository} from "@nestjs/typeorm";
+import {Recipe} from "../recipes/entities/recipe.entity";
+import {DataSource, Repository} from "typeorm";
+import {RecipeIngredient} from "../recipes/entities/recipe-ingredient.entity";
+import {RecipeStep} from "../recipes/entities/recipe-step.entity";
+import {PublicRecipeImportDto} from "./dto/public-recipe-import.dto";
 
 interface EdamamIngredient {
     text: string;
@@ -57,6 +63,11 @@ interface SpoonacularRecipeResponse {
 
 @Injectable()
 export class PublicRecipeService {
+    constructor(
+        @InjectRepository(Recipe) private readonly recipeRepo: Repository<Recipe>,
+        private readonly dataSource: DataSource,
+    ) {}
+
     private readonly EDAMAM_APP_ID = '34930e1e';
     private readonly EDAMAM_APP_KEY = '384dedda7dd0e2979b3ba2316ee4b704';
     private readonly EDAMAM_BASE_URL = 'https://api.edamam.com/api/recipes/v2';
@@ -264,5 +275,97 @@ export class PublicRecipeService {
     private formatCategory(category: string): string {
         return category.charAt(0).toUpperCase() + category.slice(1);
     }
+
+    /**
+     * Ensure a local recipe exists for (source, sourceId).
+     * If not present, materialize Recipe + Ingredients + Steps in a transaction.
+     * Steps priority:
+     *  1) use normalized steps from payload
+     *  2) otherwise fetch via fetchRecipeSteps(recipeUrl, recipeId)
+     */
+    async ensureLocalRecipeFromPublic(dto: PublicRecipeImportDto, ownerId: string) {
+        const normSource = dto.source; // 'edamam' | 'spoonacular'
+        const normSourceId = String(dto.sourceId).trim().toLowerCase(); // 规范化，避免大小写/空格造成重复
+
+        return this.dataSource.transaction(async (manager) => {
+            // 1) fast path：已存在则直接返回
+            const existed = await manager.findOne(Recipe, { where: { source: normSource, sourceId: normSourceId } });
+            if (existed) return { recipe: existed, created: false };
+
+            const insertResult = await manager
+                .createQueryBuilder()
+                .insert()
+                .into(Recipe)
+                .values({
+                    title: dto.title,
+                    description: dto.description ?? undefined,
+                    source: normSource,
+                    sourceId: normSourceId,
+                    sourceUrl: dto.recipeUrl ?? undefined,
+                    image_url: dto.imageUrl ?? undefined,
+                    sourceData: dto.sourceData ?? undefined,
+                    is_published: false,
+                })
+                .returning(['id']) // PG 可返回 id；若被 DO NOTHING，不会返回行
+                .execute();
+
+            let recipeId: string | undefined = insertResult.identifiers?.[0]?.id || insertResult.generatedMaps?.[0]?.id;
+
+            // 3) 如果因为并发被 DO NOTHING，则回查已存在的记录
+            if (!recipeId) {
+                const already = await manager.findOneOrFail(Recipe, { where: { source: normSource, sourceId: normSourceId } });
+                recipeId = already.id;
+            }
+
+            // 4) 用拿到的 recipeId 继续落配料/步骤（若是并发插入，这里可能已存在配料/步骤。
+            //    为“最小改动”，我们只在首次插入时写入；若并发导致非首次，可加存在性检查或忽略错误）
+
+            const recipe = await manager.findOneOrFail(Recipe, { where: { id: recipeId } });
+
+            // Ingredients（仅当首次插入才写；简单判断：如果传入有 ingredients 且当前库里为 0）
+            const ingCount = await manager.count(RecipeIngredient, { where: { recipe: { id: recipeId } } });
+            if (ingCount === 0 && (dto.ingredients?.length ?? 0) > 0) {
+                for (let i = 0; i < dto.ingredients.length; i++) {
+                    const ing = dto.ingredients[i];
+                    await manager.save(
+                        manager.create(RecipeIngredient, {
+                            recipe,
+                            name: ing.name,
+                            quantity: ing.quantity ?? undefined,
+                            unit: ing.unit ?? undefined,
+                            position: i,
+                        }),
+                    );
+                }
+            }
+
+            // Steps：优先用传入；为空时尝试抓取；同样仅在库里没有步骤时写入
+            const stepCount = await manager.count(RecipeStep, { where: { recipe: { id: recipeId } } });
+            if (stepCount === 0) {
+                let steps = dto.steps ?? [];
+                if ((!steps || steps.length === 0) && dto.recipeUrl) {
+                    const fetched = await this.fetchRecipeSteps(dto.recipeUrl, recipeId);
+                    steps = (fetched ?? []).map((text: any, idx: number) => ({ number: idx + 1, instruction: String(text) }));
+                }
+                steps.sort((a, b) => (a.number ?? 0) - (b.number ?? 0));
+                for (let i = 0; i < steps.length; i++) {
+                    const stepNo = Number.isFinite(Number(steps[i].number)) ? Number(steps[i].number) : i + 1;
+                    const content = (steps[i].instruction ?? '').toString().trim() || '-';
+
+                    await manager.save(
+                        manager.create(RecipeStep as any, {
+                            recipe,
+                            step_no: stepNo,
+                            content,
+                        }),
+                    );
+                }
+            }
+
+            return { recipe, created: !!insertResult.identifiers?.length };
+        });
+    }
+
+
 }
 

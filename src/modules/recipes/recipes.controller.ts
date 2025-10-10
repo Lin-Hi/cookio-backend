@@ -15,6 +15,12 @@ export class RecipesController {
     @ApiQuery({ name: 'category', required: false })
     @ApiQuery({ name: 'difficulty', required: false })
     @ApiQuery({ name: 'ownerId', required: false })
+    @ApiQuery({
+        name: 'source',
+        required: false,
+        description: "recipe source, default 'community'",
+        enum: ['community', 'edamam', 'spoonacular'],
+    })
     @ApiQuery({ name: 'page', required: false })
     @ApiQuery({ name: 'pageSize', required: false })
     findAll(
@@ -22,12 +28,18 @@ export class RecipesController {
         @Query('category') category?: string,
         @Query('difficulty') difficulty?: string,
         @Query('ownerId') ownerId?: string,
+        @Query('source') source: 'community' | 'edamam' | 'spoonacular' = 'community',
         @Query('page') page = '1',
         @Query('pageSize') pageSize = '20',
     ) {
         return this.service.findAll({
-            q, category, difficulty, ownerId,
-            page: Number(page), pageSize: Number(pageSize),
+            q,
+            category,
+            difficulty,
+            ownerId,
+            source,
+            page: Number(page),
+            pageSize: Number(pageSize),
         });
     }
 
