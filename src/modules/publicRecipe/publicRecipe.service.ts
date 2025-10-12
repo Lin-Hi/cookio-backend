@@ -114,7 +114,8 @@ export class PublicRecipeService {
 
             params.from = from;
             params.to = to;
-
+            params.random = true;
+            
             // 调用 Edamam API
             const response = await axios.get<EdamamResponse>(this.EDAMAM_BASE_URL, {
                 params,
