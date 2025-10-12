@@ -109,6 +109,7 @@ export class RecipesService {
             where: { id },
             relations: { owner: true },
         });
+        if (!recipe) throw new Error('Recipe not found');
 
         const [ingredients, steps] = await Promise.all([
             this.ingRepo.find({ where: { recipe: { id } }, order: { position: 'ASC' } }),
