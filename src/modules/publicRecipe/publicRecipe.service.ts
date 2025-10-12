@@ -71,7 +71,10 @@ export class PublicRecipeService {
     private readonly EDAMAM_APP_ID = '34930e1e';
     private readonly EDAMAM_APP_KEY = '384dedda7dd0e2979b3ba2316ee4b704';
     private readonly EDAMAM_BASE_URL = 'https://api.edamam.com/api/recipes/v2';
-    private readonly SPOONACULAR_API_KEY = '680da435be754ceaa046bb1a3be1e563';
+    // private readonly SPOONACULAR_API_KEY = '680da435be754ceaa046bb1a3be1e563';
+    // private readonly SPOONACULAR_API_KEY = '4364dbc551284eceb8ceaa815db7c340';
+    // private readonly SPOONACULAR_API_KEY = '6522a0b791764a61839b38af2c10510b';
+    private readonly SPOONACULAR_API_KEY = '609b48ffbea84bb791e19acb10706760';
     private readonly SPOONACULAR_BASE_URL = 'https://api.spoonacular.com';
 
     /**
