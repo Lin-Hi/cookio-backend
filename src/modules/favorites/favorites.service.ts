@@ -5,6 +5,8 @@ import { Favorite } from './favorite.entity';
 import { User } from '../users/user.entity';
 import { Recipe } from '../recipes/entities/recipe.entity';
 import { FavoriteResponseDto, FavoriteCheckDto, FavoriteCountDto } from './dto/favorite-response.dto';
+import {PublicRecipeService} from "../publicRecipe/publicRecipe.service";
+import {PublicRecipeImportDto} from "../publicRecipe/dto/public-recipe-import.dto";
 
 @Injectable()
 export class FavoritesService {
@@ -12,6 +14,7 @@ export class FavoritesService {
         @InjectRepository(Favorite) private readonly repo: Repository<Favorite>,
         @InjectRepository(User) private readonly userRepo: Repository<User>,
         @InjectRepository(Recipe) private readonly recipeRepo: Repository<Recipe>,
+        private readonly publicService: PublicRecipeService,
     ) {}
 
 
@@ -81,5 +84,28 @@ export class FavoritesService {
             where: { recipe: { id: recipeId } },
         });
         return { recipeId, count };
+    }
+
+    async isFavoriteByExternal(source: 'edamam'|'spoonacular', sourceId: string) {
+        const recipe = await this.recipeRepo.findOne({ where: { source, sourceId } });
+        if (!recipe) return { isFavorite: false, recipeId: null };
+        const count = await this.repo.count({ where: { recipe: { id: recipe.id } } });
+        return { isFavorite: count > 0, recipeId: recipe.id };
+    }
+
+    async getLocalRecipeByExternal(source: 'edamam'|'spoonacular', sourceId: string) {
+        const recipe = await this.recipeRepo.findOne({
+            where: { source, sourceId },
+            relations: ['ingredients', 'steps', 'owner'],
+        });
+        if (!recipe) {
+            throw new NotFoundException('Recipe not imported locally');
+        }
+        return recipe;
+    }
+
+    async addFromPublic(userId: string, dto: PublicRecipeImportDto) {
+        const { recipe } = await this.publicService.ensureLocalRecipeFromPublic(dto, userId);
+        return this.add(userId, recipe.id);
     }
 }

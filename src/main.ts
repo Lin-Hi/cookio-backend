@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { json, urlencoded } from 'express';
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
@@ -10,6 +11,9 @@ async function bootstrap() {
         origin: 'http://localhost:3000',
         credentials: true,
     });
+
+    app.use(json({ limit: '20mb' }));
+    app.use(urlencoded({ limit: '20mb', extended: true }));
 
     // Global DTO validation
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));

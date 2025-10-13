@@ -14,6 +14,7 @@ type FindAllParams = {
     category?: string;
     difficulty?: string;
     ownerId?: string;
+    source?: 'community' | 'edamam' | 'spoonacular';
     page: number;
     pageSize: number;
 };
@@ -30,12 +31,16 @@ export class RecipesService {
     ) {}
 
     async findAll(params: FindAllParams) {
-        const { q, category, difficulty, ownerId, page, pageSize } = params;
+        const { q, category, difficulty, ownerId, source = 'community', page, pageSize } = params;
+
         const where: any = {};
         if (q) where.title = ILike(`%${q}%`);
         if (category) where.category = category;
         if (difficulty) where.difficulty = difficulty;
         if (ownerId) where.owner = { id: ownerId };
+
+        // 按来源过滤（默认 community）
+        if (source) where.source = source;
 
         const [items, total] = await this.recipeRepo.findAndCount({
             where,
@@ -99,12 +104,12 @@ export class RecipesService {
 
         return { items: mapped, total, page, pageSize };
     }
-
     async findOne(id: string) {
         const recipe = await this.recipeRepo.findOneOrFail({
             where: { id },
             relations: { owner: true },
         });
+        if (!recipe) throw new Error('Recipe not found');
 
         const [ingredients, steps] = await Promise.all([
             this.ingRepo.find({ where: { recipe: { id } }, order: { position: 'ASC' } }),
