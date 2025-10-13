@@ -93,6 +93,17 @@ export class FavoritesService {
         return { isFavorite: count > 0, recipeId: recipe.id };
     }
 
+    async getLocalRecipeByExternal(source: 'edamam'|'spoonacular', sourceId: string) {
+        const recipe = await this.recipeRepo.findOne({
+            where: { source, sourceId },
+            relations: ['ingredients', 'steps', 'owner'],
+        });
+        if (!recipe) {
+            throw new NotFoundException('Recipe not imported locally');
+        }
+        return recipe;
+    }
+
     async addFromPublic(userId: string, dto: PublicRecipeImportDto) {
         const { recipe } = await this.publicService.ensureLocalRecipeFromPublic(dto, userId);
         return this.add(userId, recipe.id);

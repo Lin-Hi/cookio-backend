@@ -30,6 +30,20 @@ export class FavoritesController {
         return this.service.isFavoriteByExternal(source, sourceId);
     }
 
+    // Get full local recipe data (including steps) by external source/sourceId
+    // Used to avoid calling external API when recipe is already imported
+    @Get('public/:source/:sourceId/recipe')
+    @ApiParam({ name: 'source', type: 'string', example: 'edamam' })
+    @ApiParam({ name: 'sourceId', type: 'string', example: 'external-id-or-uri-hash' })
+    @ApiOkResponse({ description: 'Get full local recipe data if imported' })
+    @ApiNotFoundResponse({ description: 'Recipe not imported locally' })
+    getLocalRecipeByExternal(
+        @Param('source') source: 'edamam' | 'spoonacular',
+        @Param('sourceId') sourceId: string,
+    ) {
+        return this.service.getLocalRecipeByExternal(source, sourceId);
+    }
+
     // List current user's favorite recipes (paginated).
     @Get(':userId')
     @ApiParam({ name: 'userId', type: 'string', format: 'uuid' })

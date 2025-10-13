@@ -1,5 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, Index, ManyToOne, CreateDateColumn, UpdateDateColumn, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, Index, ManyToOne, OneToMany, CreateDateColumn, UpdateDateColumn, JoinColumn } from 'typeorm';
 import { User } from '../../users/user.entity';
+import { RecipeIngredient } from './recipe-ingredient.entity';
+import { RecipeStep } from './recipe-step.entity';
 
 @Index('uq_recipe_source_sourceId', ['source', 'sourceId'], { unique: true })
 @Entity({ name: 'recipes' })
@@ -55,4 +57,10 @@ export class Recipe {
 
     @Column({ type: 'jsonb', nullable: true })
     sourceData!: any | null;
+
+    @OneToMany(() => RecipeIngredient, ingredient => ingredient.recipe, { cascade: true })
+    ingredients!: RecipeIngredient[];
+
+    @OneToMany(() => RecipeStep, step => step.recipe, { cascade: true })
+    steps!: RecipeStep[];
 }
