@@ -21,6 +21,15 @@ export class PantryItem {
     @Column({ type: 'varchar', length: 40, nullable: true })
     unit?: string | null;
 
+    @Column({ type: 'varchar', length: 100, nullable: true })
+    category?: string | null;
+
+    @Column({ type: 'text', nullable: true })
+    image_url?: string | null;
+
+    @Column({ type: 'text', nullable: true })
+    description?: string | null;
+
     @Column({ type: 'date', nullable: true })
     expiresAt?: Date | null;
 

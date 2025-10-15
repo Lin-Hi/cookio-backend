@@ -710,6 +710,283 @@ GET /publicRecipe?q=pasta&page=2&pageSize=10
 
 ---
 
+## 🥫 储藏室管理 (Pantry)
+
+储藏室模块用于管理用户的食材库存，支持记录食材名称、数量、种类、过期时间等信息。
+
+### 1. 获取储藏室物品列表
+
+```http
+GET /pantry/{userId}
+```
+
+获取指定用户的储藏室物品列表，支持搜索、排序、过滤和分页。
+
+**请求头**:
+
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**路径参数**:
+
+- `userId` (string, required): 用户 UUID
+
+**查询参数**:
+
+- `page` (number, optional): 页码，默认 1
+- `limit` (number, optional): 每页数量，默认 10
+- `q` (string, optional): 搜索关键词（按食材名称模糊搜索）
+- `category` (string, optional): 按种类筛选
+- `sortBy` (string, optional): 排序字段
+  - 可选值: `createdAt`, `name`, `expiresAt`
+  - 默认: `createdAt`
+- `order` (string, optional): 排序方向
+  - 可选值: `ASC`, `DESC`
+  - 默认: `DESC`
+- `expiringWithin` (number, optional): 筛选即将过期的食材（天数）
+  - 例如: `7` 表示筛选 7 天内过期的食材
+
+**请求示例**:
+
+```bash
+# 获取所有食材
+GET /pantry/123e4567-e89b-12d3-a456-426614174000
+
+# 搜索番茄
+GET /pantry/123e4567-e89b-12d3-a456-426614174000?q=番茄
+
+# 筛选蔬菜类食材
+GET /pantry/123e4567-e89b-12d3-a456-426614174000?category=蔬菜
+
+# 查找 7 天内过期的食材
+GET /pantry/123e4567-e89b-12d3-a456-426614174000?expiringWithin=7
+
+# 按名称排序
+GET /pantry/123e4567-e89b-12d3-a456-426614174000?sortBy=name&order=ASC
+
+# 组合查询
+GET /pantry/123e4567-e89b-12d3-a456-426614174000?category=蔬菜&expiringWithin=7&sortBy=expiresAt&order=ASC
+```
+
+**响应示例**:
+
+```json
+{
+  "items": [
+    {
+      "id": "item-uuid-1",
+      "name": "番茄",
+      "quantity": "500",
+      "unit": "g",
+      "category": "蔬菜",
+      "image_url": "https://example.com/tomato.jpg",
+      "description": "新鲜的有机番茄，适合做沙拉",
+      "expiresAt": "2025-10-31",
+      "createdAt": "2025-10-15T10:30:00.000Z",
+      "updatedAt": "2025-10-15T10:30:00.000Z"
+    },
+    {
+      "id": "item-uuid-2",
+      "name": "鸡蛋",
+      "quantity": "12",
+      "unit": "个",
+      "category": "蛋奶",
+      "image_url": null,
+      "description": null,
+      "expiresAt": "2025-11-01",
+      "createdAt": "2025-10-14T08:20:00.000Z",
+      "updatedAt": "2025-10-14T08:20:00.000Z"
+    }
+  ],
+  "total": 2,
+  "page": 1,
+  "pageSize": 10
+}
+```
+
+### 2. 创建储藏室物品
+
+```http
+POST /pantry/{userId}/items
+```
+
+为指定用户创建新的储藏室物品。
+
+**请求头**:
+
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**路径参数**:
+
+- `userId` (string, required): 用户 UUID
+
+**请求体**:
+
+```json
+{
+  "name": "番茄",
+  "quantity": "500",
+  "unit": "g",
+  "category": "蔬菜",
+  "image_url": "https://example.com/tomato.jpg",
+  "description": "新鲜的有机番茄，适合做沙拉",
+  "expiresAt": "2025-10-31"
+}
+```
+
+**字段说明**:
+
+- `name` (string, required): 食材名称，最大 150 字符
+- `quantity` (string, optional): 数量，最大 80 字符
+- `unit` (string, optional): 单位，最大 40 字符
+- `category` (string, optional): 种类，最大 100 字符
+- `image_url` (string, optional): 图片 URL 或 base64 编码的图片数据（支持 data:image/jpeg;base64,... 格式）
+- `description` (string, optional): 描述或备注
+- `expiresAt` (string, optional): 过期时间，ISO 日期格式 (YYYY-MM-DD)
+
+**响应示例**:
+
+```json
+{
+  "user": {
+    "id": "ab1ecc04-9308-4f59-a7b6-6d190ec9f6df",
+    "email": "jiananliu03@gmail.com",
+    "password": "$2b$12$3ZeH2dcJbDmpi7/6bsJjjun1i4lxhntzCMuCKfUK/jjaVxJC9At5e",
+    "display_name": "JNL",
+    "avatar_url": null,
+    "created_at": "2025-10-02T13:39:53.732Z"
+  },
+  "name": "potato",
+  "quantity": "1",
+  "unit": "g",
+  "category": "fruit",
+  "image_url": "https://example.com/tomato.jpg",
+  "description": "123",
+  "expiresAt": "2025-10-31T00:00:00.000Z",
+  "id": "733f545f-3f87-4da5-9431-521e8eff625e",
+  "createdAt": "2025-10-15T11:48:49.754Z",
+  "updatedAt": "2025-10-15T11:48:49.754Z"
+}
+```
+
+### 3. 更新储藏室物品
+
+```http
+PUT /pantry/{userId}/items/{itemId}
+```
+
+更新指定的储藏室物品信息。
+
+**请求头**:
+
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**路径参数**:
+
+- `userId` (string, required): 用户 UUID
+- `itemId` (string, required): 物品 UUID
+
+**请求体**:
+
+所有字段都是可选的，只需提供要更新的字段。
+
+```json
+{
+  "quantity": "300",
+  "category": "水果",
+  "description": "已使用部分，剩余 300g"
+}
+```
+
+**响应示例**:
+
+```json
+{
+  "id": "item-uuid-1",
+  "name": "番茄",
+  "quantity": "300",
+  "unit": "g",
+  "category": "水果",
+  "image_url": "https://example.com/tomato.jpg",
+  "description": "已使用部分，剩余 300g",
+  "expiresAt": "2025-10-31",
+  "createdAt": "2025-10-15T10:30:00.000Z",
+  "updatedAt": "2025-10-15T12:45:00.000Z"
+}
+```
+
+### 4. 删除储藏室物品
+
+```http
+DELETE /pantry/{userId}/items/{itemId}
+```
+
+删除指定的储藏室物品。
+
+**请求头**:
+
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**路径参数**:
+
+- `userId` (string, required): 用户 UUID
+- `itemId` (string, required): 物品 UUID
+
+**响应示例**:
+
+```json
+{
+  "deleted": true
+}
+```
+
+### 使用场景
+
+1. **库存管理**: 记录家中现有的食材库存
+2. **过期提醒**: 通过 `expiringWithin` 参数查找即将过期的食材
+3. **分类管理**: 按种类（蔬菜、肉类、调味料等）组织食材
+4. **购物计划**: 基于库存情况规划购物清单
+5. **食谱匹配**: 根据现有食材推荐可以制作的食谱
+
+### 注意事项
+
+1. **权限控制**: 用户只能访问和修改自己的储藏室物品
+2. **JWT 认证**: 所有接口都需要有效的 JWT token
+3. **日期格式**: `expiresAt` 使用 ISO 日期格式 (YYYY-MM-DD)
+4. **软删除**: 删除操作是硬删除，数据无法恢复
+5. **图片 URL**: `image_url` 字段支持外部图片链接
+
+### 错误响应
+
+```json
+// 权限不足
+{
+  "statusCode": 403,
+  "message": "Not allowed to access this user pantry"
+}
+
+// 物品不存在
+{
+  "statusCode": 404,
+  "message": "Pantry item not found"
+}
+
+// 用户不存在
+{
+  "statusCode": 400,
+  "message": "User not found"
+}
+```
+
+---
+
 ## 🔧 数据模型
 
 ### User (用户)
@@ -767,6 +1044,24 @@ GET /publicRecipe?q=pasta&page=2&pageSize=10
 }
 ```
 
+### PantryItem (储藏室物品)
+
+```typescript
+{
+  id: string;           // UUID
+  name: string;         // 食材名称
+  quantity?: string;    // 数量
+  unit?: string;        // 单位
+  category?: string;    // 种类
+  image_url?: string;   // 图片URL
+  description?: string; // 描述或备注
+  expiresAt?: Date;     // 过期时间
+  createdAt: Date;      // 创建时间
+  updatedAt: Date;      // 更新时间
+  user: User;           // 所属用户
+}
+```
+
 ---
 
 ## 🚀 快速开始
@@ -808,6 +1103,19 @@ curl http://localhost:8080/users
 
 # 搜索食谱
 curl "http://localhost:8080/recipes?q=红烧&category=中式&page=1&pageSize=10"
+
+# 获取储藏室列表（需要 JWT token）
+curl -X GET "http://localhost:8080/pantry/YOUR_USER_ID" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# 添加储藏室物品（需要 JWT token）
+curl -X POST http://localhost:8080/pantry/YOUR_USER_ID/items \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{"name":"番茄","quantity":"500","unit":"g","category":"蔬菜","expiresAt":"2025-10-31"}'
+
+# 搜索公共菜谱
+curl "http://localhost:8080/publicRecipe?q=chicken&dishType=Main+course"
 ```
 
 ---
@@ -844,4 +1152,4 @@ curl "http://localhost:8080/recipes?q=红烧&category=中式&page=1&pageSize=10"
 
 ---
 
-_最后更新: 2025 年 10 月 2 日_
+_最后更新: 2025 年 10 月 15 日_

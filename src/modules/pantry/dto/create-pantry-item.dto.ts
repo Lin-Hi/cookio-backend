@@ -14,6 +14,18 @@ export class CreatePantryItemDto {
     @IsOptional() @IsString() @MaxLength(40)
     unit?: string;
 
+    @ApiPropertyOptional({ maxLength: 100, example: '蔬菜' })
+    @IsOptional() @IsString() @MaxLength(100)
+    category?: string;
+
+    @ApiPropertyOptional({ example: 'https://example.com/tomato.jpg or data:image/jpeg;base64,...' })
+    @IsOptional() @IsString()
+    image_url?: string;
+
+    @ApiPropertyOptional({ example: '新鲜的有机番茄，适合做沙拉' })
+    @IsOptional() @IsString()
+    description?: string;
+
     @ApiPropertyOptional({ format: 'date', example: '2025-10-31' })
     @IsOptional() @IsDateString()
     expiresAt?: string; // ISO date
