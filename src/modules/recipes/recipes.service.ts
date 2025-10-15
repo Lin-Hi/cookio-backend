@@ -1,13 +1,13 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, ILike, In, Repository } from 'typeorm';
-import { Recipe } from './entities/recipe.entity';
-import { RecipeIngredient } from './entities/recipe-ingredient.entity';
-import { RecipeStep } from './entities/recipe-step.entity';
-import { CreateRecipeDto } from './dto/create-recipe.dto';
-import { UpdateRecipeDto } from './dto/update-recipe.dto';
-import { User } from '../users/user.entity';
-import { ReviewsService } from '../reviews/reviews.service';
+import {Injectable} from '@nestjs/common';
+import {InjectRepository} from '@nestjs/typeorm';
+import {DataSource, ILike, In, Repository} from 'typeorm';
+import {Recipe} from './entities/recipe.entity';
+import {RecipeIngredient} from './entities/recipe-ingredient.entity';
+import {RecipeStep} from './entities/recipe-step.entity';
+import {CreateRecipeDto} from './dto/create-recipe.dto';
+import {UpdateRecipeDto} from './dto/update-recipe.dto';
+import {User} from '../users/user.entity';
+import {ReviewsService} from '../reviews/reviews.service';
 
 type FindAllParams = {
     q?: string;
@@ -15,6 +15,7 @@ type FindAllParams = {
     difficulty?: string;
     ownerId?: string;
     source?: 'community' | 'edamam' | 'spoonacular';
+    is_published?: boolean;
     page: number;
     pageSize: number;
 };
@@ -28,44 +29,54 @@ export class RecipesService {
         @InjectRepository(RecipeStep) private readonly stepRepo: Repository<RecipeStep>,
         @InjectRepository(User) private readonly userRepo: Repository<User>,
         private readonly reviewsService: ReviewsService,
-    ) {}
+    ) {
+    }
 
     async findAll(params: FindAllParams) {
-        const { q, category, difficulty, ownerId, source = 'community', page, pageSize } = params;
+        const {q, category, difficulty, ownerId, source = 'community', is_published, page, pageSize} = params;
 
-        const where: any = {};
-        if (q) where.title = ILike(`%${q}%`);
-        if (category) where.category = category;
-        if (difficulty) where.difficulty = difficulty;
-        if (ownerId) where.owner = { id: ownerId };
+        // build a common base filter; we'll reuse it for OR search when q is present
+        const common: any = {};
+        if (category) common.category = category;
+        if (difficulty) common.difficulty = difficulty;
+        if (ownerId) common.owner = {id: ownerId};
+        if (source) common.source = source;                 // default is 'community'
+        if (typeof is_published === 'boolean') common.is_published = is_published;
+        // when q exists, search title OR description using array "where" (OR)
+        let where: any = common;
+        if (q) {
+            const like = ILike(`%${q}%`);
+            where = [
+                {...common, title: like},
+                {...common, description: like},
+            ];
+        }
 
-        // 按来源过滤（默认 community）
-        if (source) where.source = source;
 
         const [items, total] = await this.recipeRepo.findAndCount({
             where,
-            relations: { owner: true },
-            order: { created_at: 'DESC' },
+            relations: {owner: true},
+            order: {created_at: 'DESC'},
             skip: (page - 1) * pageSize,
             take: pageSize,
         });
 
         if (items.length === 0) {
-            return { items: [], total, page, pageSize };
+            return {items: [], total, page, pageSize};
         }
 
         const recipeIds = items.map((r) => r.id);
 
         const [allIngredients, allSteps] = await Promise.all([
             this.ingRepo.find({
-                where: { recipe: { id: In(recipeIds) } },
-                order: { position: 'ASC' },
-                relations: { recipe: true },
+                where: {recipe: {id: In(recipeIds)}},
+                order: {position: 'ASC'},
+                relations: {recipe: true},
             }),
             this.stepRepo.find({
-                where: { recipe: { id: In(recipeIds) } },
-                order: { step_no: 'ASC' },
-                relations: { recipe: true },
+                where: {recipe: {id: In(recipeIds)}},
+                order: {step_no: 'ASC'},
+                relations: {recipe: true},
             }),
         ]);
 
@@ -102,21 +113,22 @@ export class RecipesService {
             steps: stepsByRecipeId.get(r.id) ?? [],
         }));
 
-        return { items: mapped, total, page, pageSize };
+        return {items: mapped, total, page, pageSize};
     }
+
     async findOne(id: string) {
         const recipe = await this.recipeRepo.findOneOrFail({
-            where: { id },
-            relations: { owner: true },
+            where: {id},
+            relations: {owner: true},
         });
         if (!recipe) throw new Error('Recipe not found');
 
         const [ingredients, steps] = await Promise.all([
-            this.ingRepo.find({ where: { recipe: { id } }, order: { position: 'ASC' } }),
-            this.stepRepo.find({ where: { recipe: { id } }, order: { step_no: 'ASC' } }),
+            this.ingRepo.find({where: {recipe: {id}}, order: {position: 'ASC'}}),
+            this.stepRepo.find({where: {recipe: {id}}, order: {step_no: 'ASC'}}),
         ]);
 
-        const { avgRating, reviewsCount } = await this.reviewsService.summary(id);
+        const {avgRating, reviewsCount} = await this.reviewsService.summary(id);
 
         return {
             ...recipe,
@@ -132,7 +144,7 @@ export class RecipesService {
 
     async create(dto: CreateRecipeDto) {
         return this.dataSource.transaction(async (manager) => {
-            const owner = await manager.findOneByOrFail(User, { id: dto.owner_id });
+            const owner = await manager.findOneByOrFail(User, {id: dto.owner_id});
 
             const recipe = manager.create(Recipe, {
                 owner,
@@ -175,17 +187,17 @@ export class RecipesService {
             // assemble response within the same transaction
             const [ingredients, steps] = await Promise.all([
                 manager.find(RecipeIngredient, {
-                    where: { recipe: { id: recipe.id } },
-                    order: { position: 'ASC' },
+                    where: {recipe: {id: recipe.id}},
+                    order: {position: 'ASC'},
                 }),
                 manager.find(RecipeStep, {
-                    where: { recipe: { id: recipe.id } },
-                    order: { step_no: 'ASC' },
+                    where: {recipe: {id: recipe.id}},
+                    order: {step_no: 'ASC'},
                 }),
             ]);
 
             // "owner" is already loaded variable above
-            return { ...recipe, owner, ingredients, steps };
+            return {...recipe, owner, ingredients, steps};
         });
     }
 
@@ -196,7 +208,7 @@ export class RecipesService {
     // This approach is idempotent and easy to reason about on the client (full replace).
     async update(id: string, dto: UpdateRecipeDto) {
         return this.dataSource.transaction(async (manager) => {
-            const recipe = await manager.findOne(Recipe, { where: { id } });
+            const recipe = await manager.findOne(Recipe, {where: {id}});
             if (!recipe) throw new Error('Recipe not found');
 
             // Patch base fields
@@ -214,7 +226,7 @@ export class RecipesService {
 
             // Replace ingredients
             if (Array.isArray(dto.ingredients)) {
-                await manager.delete(RecipeIngredient, { recipe: { id: recipe.id } });
+                await manager.delete(RecipeIngredient, {recipe: {id: recipe.id}});
                 const newIngredients = dto.ingredients.map((i, idx) =>
                     manager.create(RecipeIngredient, {
                         recipe,
@@ -229,7 +241,7 @@ export class RecipesService {
 
             // Replace steps
             if (Array.isArray(dto.steps)) {
-                await manager.delete(RecipeStep, { recipe: { id: recipe.id } });
+                await manager.delete(RecipeStep, {recipe: {id: recipe.id}});
                 const newSteps = dto.steps.map((s) =>
                     manager.create(RecipeStep, {
                         recipe,
@@ -242,19 +254,19 @@ export class RecipesService {
             }
 
             const [ingredients, steps] = await Promise.all([
-                manager.find(RecipeIngredient, { where: { recipe: { id: recipe.id } }, order: { position: 'ASC' } }),
-                manager.find(RecipeStep, { where: { recipe: { id: recipe.id } }, order: { step_no: 'ASC' } }),
+                manager.find(RecipeIngredient, {where: {recipe: {id: recipe.id}}, order: {position: 'ASC'}}),
+                manager.find(RecipeStep, {where: {recipe: {id: recipe.id}}, order: {step_no: 'ASC'}}),
             ]);
-            return { ...recipe, ingredients, steps };
+            return {...recipe, ingredients, steps};
         });
     }
 
     async remove(id: string) {
         return this.dataSource.transaction(async (manager) => {
-            const recipe = await manager.findOne(Recipe, { where: { id } });
+            const recipe = await manager.findOne(Recipe, {where: {id}});
             if (!recipe) throw new Error('Recipe not found');
-            await manager.delete(Recipe, { id });
-            return { deleted: true };
+            await manager.delete(Recipe, {id});
+            return {deleted: true};
         });
     }
 }
