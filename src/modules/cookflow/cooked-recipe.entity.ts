@@ -9,11 +9,11 @@ export class CookedRecipe {
     id!: string;
 
     @ManyToOne(() => User, { nullable: false, onDelete: 'CASCADE' })
-    user?: User;
+    user!: User;
 
     @ManyToOne(() => Recipe, { nullable: false, onDelete: 'CASCADE' })
-    recipe?: Recipe;
+    recipe!: Recipe;
 
     @CreateDateColumn()
-    cooked_at?: Date;
+    cooked_at!: Date;
 }
