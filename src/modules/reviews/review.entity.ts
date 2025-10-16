@@ -1,12 +1,11 @@
-import {Column, CreateDateColumn, Entity, Index, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn, Unique,} from 'typeorm';
+import {Column, CreateDateColumn, Entity, Index, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn} from 'typeorm';
 import { Recipe } from '../recipes/entities/recipe.entity';
 import { User } from '../users/user.entity';
 
 /**
- * One reviews per (user, recipe). Rating 1..5.
+ * Multiple reviews per (user, recipe). Rating 1..5.
  */
 @Entity('recipe_review')
-@Unique('UQ_recipe_user', ['recipe', 'user'])
 @Index('IDX_recipe_review_recipe', ['recipe'])
 @Index('IDX_recipe_review_user', ['user'])
 export class RecipeReview {
@@ -19,8 +18,8 @@ export class RecipeReview {
     @ManyToOne(() => User, (u) => u.id, { onDelete: 'CASCADE', eager: false })
     user?: User;
 
-    @Column({ type: 'int' })
-    rating?: number; // 1..5
+    @Column({ type: 'int', nullable: true })
+    rating?: number | null; // 1..5
 
     @Column({ type: 'text', nullable: true })
     content?: string | null;

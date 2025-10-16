@@ -28,26 +28,13 @@ export class ReviewsService {
         return recipe;
     }
 
-    /** Create or replace a review for (user, recipe). Enforces 1 review per user */
+    /** Create a new review for (user, recipe). Users can create multiple reviews */
     async create(userId: string, recipeId: string, dto: CreateReviewDto) {
         const [recipe, user] = await Promise.all([
             this.mustGetRecipe(recipeId),
             this.userRepo.findOne({ where: { id: userId } }),
         ]);
         if (!user) throw new NotFoundException('User not found');
-
-        // Upsert: if user already reviewed this recipe, update it instead of failing
-        const existing = await this.repo.findOne({
-            where: { recipe: { id: recipe.id }, user: { id: user.id } },
-            relations: { recipe: true, user: true },
-        });
-
-        if (existing) {
-            existing.rating = dto.rating;
-            existing.content = dto.content ?? null;
-            const saved = await this.repo.save(existing);
-            return { ...saved, updated: true };
-        }
 
         const entity = this.repo.create({
             recipe,
