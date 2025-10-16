@@ -26,4 +26,8 @@ export class ListPantryQueryDto {
     @ApiPropertyOptional({ description: 'days to expire' })
     @IsOptional() @Type(() => Number) @IsInt() @Min(0)
     expiringWithin?: number;
+
+    @ApiPropertyOptional({ description: 'filter by category' })
+    @IsOptional() @IsString()
+    category?: string;
 }

@@ -17,13 +17,16 @@ export class PantryService {
         userId: string,
         page = 1,
         limit = 10,
-        opts?: { q?: string; sortBy?: 'createdAt'|'name'|'expiresAt'; order?: 'ASC'|'DESC'; expiringWithin?: number }
+        opts?: { q?: string; sortBy?: 'createdAt'|'name'|'expiresAt'; order?: 'ASC'|'DESC'; expiringWithin?: number; category?: string }
     ) {
         const qb = this.pantryRepo.createQueryBuilder('p')
             .where('p.userId = :userId', { userId });
 
         if (opts?.q) {
             qb.andWhere('LOWER(p.name) LIKE :q', { q: `%${opts.q.toLowerCase()}%` });
+        }
+        if (opts?.category) {
+            qb.andWhere('p.category = :category', { category: opts.category });
         }
         if (typeof opts?.expiringWithin === 'number') {
             qb.andWhere('p.expiresAt IS NOT NULL AND p.expiresAt <= :deadline', {
@@ -46,16 +49,18 @@ export class PantryService {
         const user = await this.userRepo.findOne({ where: { id: userId } });
         if (!user) throw new BadRequestException('User not found');
 
-        const entity = this.pantryRepo.create({
+        const expiresAt = dto.expiresAt ? new Date(dto.expiresAt) : null;
+
+        return this.pantryRepo.save({
             user,
             name: dto.name,
             quantity: dto.quantity ?? null,
             unit: dto.unit ?? null,
-            expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
+            category: dto.category ?? null,
+            image_url: dto.image_url ?? null,
+            description: dto.description ?? null,
+            expiresAt,
         });
-        const expiresAt = dto.expiresAt ? new Date(dto.expiresAt) : null;
-
-        return this.pantryRepo.save({ user, name: dto.name, quantity: dto.quantity ?? null, unit: dto.unit ?? null, expiresAt });
     }
 
     async update(userId: string, itemId: string, dto: UpdatePantryItemDto) {
@@ -65,6 +70,9 @@ export class PantryService {
         if (dto.name !== undefined) item.name = dto.name;
         if (dto.quantity !== undefined) item.quantity = dto.quantity ?? null;
         if (dto.unit !== undefined) item.unit = dto.unit ?? null;
+        if (dto.category !== undefined) item.category = dto.category ?? null;
+        if (dto.image_url !== undefined) item.image_url = dto.image_url ?? null;
+        if (dto.description !== undefined) item.description = dto.description ?? null;
         if (dto.expiresAt !== undefined) item.expiresAt = dto.expiresAt ? new Date(dto.expiresAt) : null;
 
         return this.pantryRepo.save(item);

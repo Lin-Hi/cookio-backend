@@ -29,6 +29,7 @@ export class PantryController {
             sortBy: query.sortBy,
             order: query.order,
             expiringWithin: query.expiringWithin,
+            category: query.category,
         });
     }
 
