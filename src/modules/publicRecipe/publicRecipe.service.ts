@@ -310,9 +310,14 @@ export class PublicRecipeService {
                     sourceId: normSourceId,
                     sourceUrl: dto.recipeUrl ?? undefined,
                     image_url: dto.imageUrl ?? undefined,
+                    category: dto.category ?? undefined,
+                    difficulty: dto.difficulty ?? undefined,
+                    cook_time: dto.cookTime ?? undefined,
+                    servings: dto.servings ?? undefined,
+                    author: dto.author ?? undefined,
                     sourceData: dto.sourceData ?? undefined,
                     is_published: false,
-                    owner: { id: ownerId } as any, // 添加 owner 字段
+                    owner: { id: ownerId } as any,
                 })
                 .orIgnore() // 如果违反唯一约束，则忽略插入
                 .returning(['id']) // PG 可返回 id；若被 DO NOTHING，不会返回行
