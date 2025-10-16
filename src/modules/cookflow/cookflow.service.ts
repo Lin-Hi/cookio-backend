@@ -5,6 +5,7 @@ import { QueueItem } from './queue-item.entity';
 import { CookedRecipe } from './cooked-recipe.entity';
 import { Recipe } from '../recipes/entities/recipe.entity';
 import { RecipeIngredient } from '../recipes/entities/recipe-ingredient.entity';
+import { RecipeStep } from '../recipes/entities/recipe-step.entity';
 import { PublicRecipeService } from '../publicRecipe/publicRecipe.service';
 import { PublicRecipeImportDto } from '../publicRecipe/dto/public-recipe-import.dto';
 
@@ -15,41 +16,68 @@ export class CookflowService {
         @InjectRepository(CookedRecipe) private readonly cookedRepo: Repository<CookedRecipe>,
         @InjectRepository(Recipe) private readonly recipeRepo: Repository<Recipe>,
         @InjectRepository(RecipeIngredient) private readonly ingRepo: Repository<RecipeIngredient>,
+        @InjectRepository(RecipeStep) private readonly stepRepo: Repository<RecipeStep>,
         private readonly publicService: PublicRecipeService,
     ) {}
 
-    // Returns queued recipes with minimal fields and ingredients array
+    // Returns queued recipes with full recipe data, ingredients and steps
     async listQueue(userId: string) {
         const items = await this.queueRepo.find({
             where: { user: { id: userId } },
-            relations: { recipe: true },
+            relations: { recipe: { owner: true } },
             order: { created_at: 'DESC' },
         });
 
         const recipeIds = items.map((i) => i.recipe.id);
         if (recipeIds.length === 0) return [];
 
-        // Preload ingredients in one query to avoid N+1
-        const ings = await this.ingRepo.find({
-            where: { recipe: { id: In(recipeIds) } },
-            relations: { recipe: true },
-            order: { position: 'ASC' },
-        });
-        const byRecipe = new Map<string, any[]>();
-        for (const ing of ings) {
+        // Preload ingredients and steps in parallel to avoid N+1
+        const [allIngredients, allSteps] = await Promise.all([
+            this.ingRepo.find({
+                where: { recipe: { id: In(recipeIds) } },
+                relations: { recipe: true },
+                order: { position: 'ASC' },
+            }),
+            this.stepRepo.find({
+                where: { recipe: { id: In(recipeIds) } },
+                relations: { recipe: true },
+                order: { step_no: 'ASC' },
+            }),
+        ]);
+
+        // Group ingredients by recipe ID
+        const ingredientsByRecipeId = new Map<string, any[]>();
+        for (const ing of allIngredients) {
             const rid = (ing as any).recipe.id as string;
-            const arr = byRecipe.get(rid) ?? [];
-            arr.push({ name: ing.name, quantity: ing.quantity, unit: ing.unit, position: (ing as any).position });
-            byRecipe.set(rid, arr);
+            const arr = ingredientsByRecipeId.get(rid) ?? [];
+            arr.push({
+                id: (ing as any).id,
+                name: ing.name,
+                quantity: ing.quantity,
+                unit: ing.unit,
+                position: (ing as any).position,
+            });
+            ingredientsByRecipeId.set(rid, arr);
+        }
+
+        // Group steps by recipe ID
+        const stepsByRecipeId = new Map<string, any[]>();
+        for (const st of allSteps) {
+            const rid = (st as any).recipe.id as string;
+            const arr = stepsByRecipeId.get(rid) ?? [];
+            arr.push({
+                id: (st as any).id,
+                step_no: (st as any).step_no,
+                content: st.content,
+                image_url: (st as any).image_url,
+            });
+            stepsByRecipeId.set(rid, arr);
         }
 
         return items.map(({ recipe }) => ({
-            id: recipe.id,
-            title: recipe.title,
-            image_url: (recipe as any).image_url,
-            cook_time: (recipe as any).cook_time,
-            category: (recipe as any).category,
-            ingredients: byRecipe.get(recipe.id) ?? [],
+            ...recipe,
+            ingredients: ingredientsByRecipeId.get(recipe.id) ?? [],
+            steps: stepsByRecipeId.get(recipe.id) ?? [],
         }));
     }
 
@@ -92,19 +120,64 @@ export class CookflowService {
         return { success: true, moved: recipeIds.length };
     }
 
-    // Returns cooked recipes list (no ingredients) for history view
+    // Returns cooked recipes list with full recipe data, ingredients and steps
     async listCooked(userId: string) {
         const items = await this.cookedRepo.find({
             where: { user: { id: userId } },
-            relations: { recipe: true },
+            relations: { recipe: { owner: true } },
             order: { cooked_at: 'DESC' },
         });
+
+        const recipeIds = items.map((i) => i.recipe.id);
+        if (recipeIds.length === 0) return [];
+
+        // Preload ingredients and steps in parallel to avoid N+1
+        const [allIngredients, allSteps] = await Promise.all([
+            this.ingRepo.find({
+                where: { recipe: { id: In(recipeIds) } },
+                relations: { recipe: true },
+                order: { position: 'ASC' },
+            }),
+            this.stepRepo.find({
+                where: { recipe: { id: In(recipeIds) } },
+                relations: { recipe: true },
+                order: { step_no: 'ASC' },
+            }),
+        ]);
+
+        // Group ingredients by recipe ID
+        const ingredientsByRecipeId = new Map<string, any[]>();
+        for (const ing of allIngredients) {
+            const rid = (ing as any).recipe.id as string;
+            const arr = ingredientsByRecipeId.get(rid) ?? [];
+            arr.push({
+                id: (ing as any).id,
+                name: ing.name,
+                quantity: ing.quantity,
+                unit: ing.unit,
+                position: (ing as any).position,
+            });
+            ingredientsByRecipeId.set(rid, arr);
+        }
+
+        // Group steps by recipe ID
+        const stepsByRecipeId = new Map<string, any[]>();
+        for (const st of allSteps) {
+            const rid = (st as any).recipe.id as string;
+            const arr = stepsByRecipeId.get(rid) ?? [];
+            arr.push({
+                id: (st as any).id,
+                step_no: (st as any).step_no,
+                content: st.content,
+                image_url: (st as any).image_url,
+            });
+            stepsByRecipeId.set(rid, arr);
+        }
+
         return items.map(({ recipe }) => ({
-            id: recipe.id,
-            title: recipe.title,
-            image_url: (recipe as any).image_url,
-            cook_time: (recipe as any).cook_time,
-            category: (recipe as any).category,
+            ...recipe,
+            ingredients: ingredientsByRecipeId.get(recipe.id) ?? [],
+            steps: stepsByRecipeId.get(recipe.id) ?? [],
         }));
     }
 
