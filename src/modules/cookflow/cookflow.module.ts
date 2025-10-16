@@ -6,9 +6,13 @@ import { CookflowService } from './cookflow.service';
 import { CookflowController } from './cookflow.controller';
 import { Recipe } from '../recipes/entities/recipe.entity';
 import { RecipeIngredient } from '../recipes/entities/recipe-ingredient.entity';
+import { PublicRecipeModule } from '../publicRecipe/publicRecipe.module';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([QueueItem, CookedRecipe, Recipe, RecipeIngredient])],
+    imports: [
+        TypeOrmModule.forFeature([QueueItem, CookedRecipe, Recipe, RecipeIngredient]),
+        PublicRecipeModule,
+    ],
     controllers: [CookflowController],
     providers: [CookflowService],
     exports: [CookflowService],

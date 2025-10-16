@@ -5,6 +5,8 @@ import { QueueItem } from './queue-item.entity';
 import { CookedRecipe } from './cooked-recipe.entity';
 import { Recipe } from '../recipes/entities/recipe.entity';
 import { RecipeIngredient } from '../recipes/entities/recipe-ingredient.entity';
+import { PublicRecipeService } from '../publicRecipe/publicRecipe.service';
+import { PublicRecipeImportDto } from '../publicRecipe/dto/public-recipe-import.dto';
 
 @Injectable()
 export class CookflowService {
@@ -13,6 +15,7 @@ export class CookflowService {
         @InjectRepository(CookedRecipe) private readonly cookedRepo: Repository<CookedRecipe>,
         @InjectRepository(Recipe) private readonly recipeRepo: Repository<Recipe>,
         @InjectRepository(RecipeIngredient) private readonly ingRepo: Repository<RecipeIngredient>,
+        private readonly publicService: PublicRecipeService,
     ) {}
 
     // Returns queued recipes with minimal fields and ingredients array
@@ -103,5 +106,11 @@ export class CookflowService {
             cook_time: (recipe as any).cook_time,
             category: (recipe as any).category,
         }));
+    }
+
+    // Add a public recipe to queue (imports to local DB first if needed)
+    async addFromPublic(userId: string, dto: PublicRecipeImportDto) {
+        const { recipe } = await this.publicService.ensureLocalRecipeFromPublic(dto, userId);
+        return this.addToQueue(userId, recipe.id);
     }
 }

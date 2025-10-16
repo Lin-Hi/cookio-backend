@@ -5,6 +5,7 @@ import { CookflowService } from './cookflow.service';
 import { AddToQueueDto } from './dto/add-to-queue.dto';
 import { Request } from 'express';
 import {MoveToCookedDto} from "./dto/move-to-cooked.dto";
+import { PublicRecipeImportDto } from '../publicRecipe/dto/public-recipe-import.dto';
 
 @ApiTags('cookflow')
 @ApiBearerAuth()
@@ -59,5 +60,12 @@ export class CookflowController {
     @ApiCreatedResponse({ description: 'Recipe re-queued or already in queue (idempotent).' })
     requeue(@Req() req: Request, @Param('recipeId', new ParseUUIDPipe()) recipeId: string) {
         return this.service.addToQueue(this.getUserId(req), recipeId);
+    }
+
+    @Post('queue/from-public')
+    @ApiOperation({ summary: 'Add a public recipe to queue (imports to local DB first)' })
+    @ApiCreatedResponse({ description: 'Public recipe imported and added to queue.' })
+    addFromPublic(@Req() req: Request, @Body() dto: PublicRecipeImportDto) {
+        return this.service.addFromPublic(this.getUserId(req), dto);
     }
 }
