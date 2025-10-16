@@ -8,6 +8,8 @@ import {CreateRecipeDto} from './dto/create-recipe.dto';
 import {UpdateRecipeDto} from './dto/update-recipe.dto';
 import {User} from '../users/user.entity';
 import {ReviewsService} from '../reviews/reviews.service';
+import {PublicRecipeService} from '../publicRecipe/publicRecipe.service';
+import {PublicRecipeImportDto} from '../publicRecipe/dto/public-recipe-import.dto';
 
 type FindAllParams = {
     q?: string;
@@ -29,6 +31,7 @@ export class RecipesService {
         @InjectRepository(RecipeStep) private readonly stepRepo: Repository<RecipeStep>,
         @InjectRepository(User) private readonly userRepo: Repository<User>,
         private readonly reviewsService: ReviewsService,
+        private readonly publicRecipeService: PublicRecipeService,
     ) {
     }
 
@@ -268,5 +271,28 @@ export class RecipesService {
             await manager.delete(Recipe, {id});
             return {deleted: true};
         });
+    }
+
+    /**
+     * Import a public recipe without adding it to favorites
+     * This method only imports the recipe to the local database
+     */
+    async importFromPublic(dto: PublicRecipeImportDto, userId: string) {
+        const { recipe, created } = await this.publicRecipeService.ensureLocalRecipeFromPublic(dto, userId);
+
+        // Return the full recipe with ingredients and steps
+        const [ingredients, steps] = await Promise.all([
+            this.ingRepo.find({where: {recipe: {id: recipe.id}}, order: {position: 'ASC'}}),
+            this.stepRepo.find({where: {recipe: {id: recipe.id}}, order: {step_no: 'ASC'}}),
+        ]);
+
+        return {
+            recipe: {
+                ...recipe,
+                ingredients,
+                steps,
+            },
+            created,
+        };
     }
 }

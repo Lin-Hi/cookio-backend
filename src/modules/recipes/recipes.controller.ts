@@ -1,11 +1,13 @@
-import { Controller, Get, Post, Body, Query, Param, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, Param, ParseUUIDPipe, UseGuards, Request } from '@nestjs/common';
 import { RecipesService } from './recipes.service';
 import { CreateRecipeDto } from './dto/create-recipe.dto';
-import {ApiTags, ApiQuery, ApiParam, ApiOperation} from '@nestjs/swagger';
+import {ApiTags, ApiQuery, ApiParam, ApiOperation, ApiBearerAuth} from '@nestjs/swagger';
 import { Put, Delete } from '@nestjs/common';
 import { UpdateRecipeDto } from './dto/update-recipe.dto';
 import {IsEnum, IsInt, IsOptional, IsString, IsUUID, Min} from "class-validator";
 import {Transform, Type} from "class-transformer";
+import {JwtAuthGuard} from '../auth/guards/jwt-auth.guard';
+import {PublicRecipeImportDto} from '../publicRecipe/dto/public-recipe-import.dto';
 
 export enum RecipeSource {
     COMMUNITY = 'community',
@@ -122,5 +124,17 @@ export class RecipesController {
     @Delete(':id')
     remove(@Param('id', new ParseUUIDPipe()) id: string) {
         return this.service.remove(id);
+    }
+
+    @Post('import-from-public')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({
+        summary: 'Import a public recipe without adding to favorites',
+        description: 'Imports a recipe from public sources (Edamam/Spoonacular) to local database without adding it to user favorites'
+    })
+    importFromPublic(@Body() dto: PublicRecipeImportDto, @Request() req: any) {
+        const userId = req.user.sub;
+        return this.service.importFromPublic(dto, userId);
     }
 }
