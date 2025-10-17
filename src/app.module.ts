@@ -14,6 +14,7 @@ import { PublicRecipeModule } from './modules/publicRecipe/publicRecipe.module';
 import {FavoritesModule} from "./modules/favorites/favorites.module";
 import {ReviewsModule} from "./modules/reviews/reviews.module";
 import {PantryModule} from "./modules/pantry/pantry.module";
+import {CookflowModule} from "./modules/cookflow/cookflow.module";
 
 @Module({
     imports: [
@@ -35,7 +36,8 @@ import {PantryModule} from "./modules/pantry/pantry.module";
         PublicRecipeModule,
         FavoritesModule,
         ReviewsModule,
-        PantryModule
+        PantryModule,
+        CookflowModule
     ],
     controllers: [AppController],
     providers: [AppService, RedisProvider],

@@ -58,6 +58,10 @@ export class Recipe {
     @Column({ type: 'jsonb', nullable: true })
     sourceData!: any | null;
 
+    // Author name from external source (e.g., original recipe author)
+    @Column({ type: 'varchar', length: 255, nullable: true })
+    author?: string | null;
+
     @OneToMany(() => RecipeIngredient, ingredient => ingredient.recipe, { cascade: true })
     ingredients!: RecipeIngredient[];
 

@@ -298,6 +298,7 @@ export class PublicRecipeService {
             const existed = await manager.findOne(Recipe, { where: { source: normSource, sourceId: normSourceId } });
             if (existed) return { recipe: existed, created: false };
 
+            // 2) 尝试插入，使用 ON CONFLICT DO NOTHING 来处理并发/重复情况
             const insertResult = await manager
                 .createQueryBuilder()
                 .insert()
@@ -309,9 +310,16 @@ export class PublicRecipeService {
                     sourceId: normSourceId,
                     sourceUrl: dto.recipeUrl ?? undefined,
                     image_url: dto.imageUrl ?? undefined,
+                    category: dto.category ?? undefined,
+                    difficulty: dto.difficulty ?? undefined,
+                    cook_time: dto.cookTime ?? undefined,
+                    servings: dto.servings ?? undefined,
+                    author: dto.author ?? undefined,
                     sourceData: dto.sourceData ?? undefined,
                     is_published: false,
+                    owner: { id: ownerId } as any,
                 })
+                .orIgnore() // 如果违反唯一约束，则忽略插入
                 .returning(['id']) // PG 可返回 id；若被 DO NOTHING，不会返回行
                 .execute();
 
