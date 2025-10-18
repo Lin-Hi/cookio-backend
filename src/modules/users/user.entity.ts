@@ -10,7 +10,7 @@ export class User {
     email!: string;
 
     @Column()
-    @Exclude() // 在序列化时排除密码字段
+    @Exclude()
     password!: string;
 
     @Column({ nullable: true })
@@ -18,6 +18,9 @@ export class User {
 
     @Column({ nullable: true })
     avatar_url?: string;
+
+    @Column({ type: 'text', nullable: true })
+    bio?: string;
 
     @CreateDateColumn()
     created_at!: Date;

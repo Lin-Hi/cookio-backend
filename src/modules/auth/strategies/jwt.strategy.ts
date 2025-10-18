@@ -24,7 +24,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         // Ensure the returned object has the correct structure for Passport
         return {
             ...userWithoutPassword,
-            sub: user.id  // Add sub field for compatibility
         };
     }
 }
