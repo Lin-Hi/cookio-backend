@@ -9,15 +9,22 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         super({
             jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
             ignoreExpiration: false,
-            secretOrKey: process.env.JWT_SECRET || 'your-secret-key', // 在生产环境中使用环境变量
+            secretOrKey: process.env.JWT_SECRET || 'your-secret-key', // Use environment variable in production
         });
     }
 
     async validate(payload: any) {
         const user = await this.authService.validateUser(payload.sub);
         if (!user) {
-            throw new UnauthorizedException('用户不存在');
+            throw new UnauthorizedException('User not found');
         }
-        return user;
+        // Return user without password, but ensure we have the user ID
+        const { password, ...userWithoutPassword } = user;
+
+        // Ensure the returned object has the correct structure for Passport
+        return {
+            ...userWithoutPassword,
+            sub: user.id  // Add sub field for compatibility
+        };
     }
 }

@@ -12,8 +12,8 @@ import { User } from '../users/user.entity';
         TypeOrmModule.forFeature([User]),
         PassportModule,
         JwtModule.register({
-            secret: process.env.JWT_SECRET || 'your-secret-key', // 在生产环境中使用环境变量
-            signOptions: { expiresIn: '24h' }, // token 有效期 24 小时
+            secret: process.env.JWT_SECRET || 'your-secret-key', // Use environment variable in production
+            signOptions: { expiresIn: '24h' }, // Token valid for 24 hours
         }),
     ],
     controllers: [AuthController],

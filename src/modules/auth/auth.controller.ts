@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Get } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -10,17 +10,18 @@ import { User } from '../users/user.entity';
 @Controller('auth')
 export class AuthController {
     constructor(private readonly authService: AuthService) {}
+
     @Post('register')
-    @ApiOperation({ summary: '用户注册' })
+    @ApiOperation({ summary: 'User registration' })
     @ApiResponse({ 
         status: 201, 
-        description: '注册成功',
+        description: 'Registration successful',
         schema: {
             example: {
                 user: {
                     id: "123e4567-e89b-12d3-a456-426614174000",
                     email: "user@example.com",
-                    display_name: "张三",
+                    display_name: "John Doe",
                     avatar_url: null,
                     created_at: "2025-10-02T10:30:00.000Z"
                 },
@@ -28,7 +29,7 @@ export class AuthController {
             }
         }
     })
-    @ApiResponse({ status: 409, description: '邮箱已被注册' })
+    @ApiResponse({ status: 409, description: 'Email already registered' })
 
 
     async register(@Body() registerDto: RegisterDto) {
@@ -36,16 +37,16 @@ export class AuthController {
     }
 
     @Post('login')
-    @ApiOperation({ summary: '用户登录' })
+    @ApiOperation({ summary: 'User login' })
     @ApiResponse({ 
         status: 200, 
-        description: '登录成功',
+        description: 'Login successful',
         schema: {
             example: {
                 user: {
                     id: "123e4567-e89b-12d3-a456-426614174000",
                     email: "user@example.com",
-                    display_name: "张三",
+                    display_name: "John Doe",
                     avatar_url: null,
                     created_at: "2025-10-02T10:30:00.000Z"
                 },
@@ -53,7 +54,7 @@ export class AuthController {
             }
         }
     })
-    @ApiResponse({ status: 401, description: '邮箱或密码错误' })
+    @ApiResponse({ status: 401, description: 'Invalid email or password' })
 
 
     async login(@Body() loginDto: LoginDto) {
@@ -63,10 +64,10 @@ export class AuthController {
     @Get('profile')
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth()
-    @ApiOperation({ summary: '获取当前用户信息' })
+    @ApiOperation({ summary: 'Get current user information' })
     @ApiResponse({ 
         status: 200, 
-        description: '获取成功',
+        description: 'User information retrieved successfully',
         schema: {
             example: {
                 id: "123e4567-e89b-12d3-a456-426614174000",
@@ -77,10 +78,10 @@ export class AuthController {
             }
         }
     })
-    @ApiResponse({ status: 401, description: '未授权' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
 
 
-    getProfile( user: User) {
-        return user;
+    getProfile(@Request() req: any) {
+        return req.user;
     }
 }
