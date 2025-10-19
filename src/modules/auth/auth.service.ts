@@ -19,7 +19,7 @@ export class AuthService {
         const { email, password, display_name, avatar_url } = registerDto;
         const existingUser = await this.userRepository.findOne({ where: { email } });
         if (existingUser) {
-            throw new ConflictException('该邮箱已被注册');
+            throw new ConflictException('Email already registered');
         }
 
         const hashedPassword = await bcrypt.hash(password, 12);
@@ -36,7 +36,7 @@ export class AuthService {
         const payload = { sub: savedUser.id, email: savedUser.email };
         const access_token = this.jwtService.sign(payload);
 
-        // 返回用户信息和 token（排除密码）
+        // Return user information and token (excluding password)
         const { password: _, ...userWithoutPassword } = savedUser;
         return {
             user: userWithoutPassword,
@@ -53,18 +53,18 @@ export class AuthService {
         });
 
         if (!user) {
-            throw new UnauthorizedException('邮箱或密码错误');
+            throw new UnauthorizedException('Invalid email or password');
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
-            throw new UnauthorizedException('邮箱或密码错误');
+            throw new UnauthorizedException('Invalid email or password');
         }
 
         const payload = { sub: user.id, email: user.email };
         const access_token = this.jwtService.sign(payload);
 
-        // 返回用户信息和 token（排除密码）
+        // Return user information and token (excluding password)
         const { password: _, ...userWithoutPassword } = user;
         return {
             user: userWithoutPassword,
@@ -72,8 +72,11 @@ export class AuthService {
         };
     }
 
-    // 验证用户（用于 JWT 策略）
+    // Validate user (for JWT strategy)
     async validateUser(userId: string): Promise<User | null> {
-        return this.userRepository.findOne({ where: { id: userId } });
+        return this.userRepository.findOne({ 
+            where: { id: userId },
+            select: ['id', 'email', 'display_name', 'avatar_url', 'bio', 'created_at', 'password']
+        });
     }
 }

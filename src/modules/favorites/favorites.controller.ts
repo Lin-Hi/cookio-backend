@@ -48,12 +48,12 @@ export class FavoritesController {
     @Get(':userId')
     @ApiParam({ name: 'userId', type: 'string', format: 'uuid' })
     @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
-    @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
+    @ApiQuery({ name: 'limit', required: false, type: Number, example: 20 })
     @ApiOkResponse({ type: [FavoriteResponseDto], description: 'List of recipes favorited by the user' })
     list(
         @Param('userId', new ParseUUIDPipe()) userId: string,
         @Query('page') page = 1,
-        @Query('limit') limit = 10,
+        @Query('limit') limit = 20,
     ) {
         return this.service.listByUser(userId, page, limit);
     }
