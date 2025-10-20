@@ -1,4 +1,4 @@
-import {Controller, Get, Query, HttpException, HttpStatus, UseGuards, Post, Body, Req} from '@nestjs/common';
+import {Controller, Get, Query, HttpException, HttpStatus, UseGuards, Post, Body, Req, Param} from '@nestjs/common';
 import {ApiTags, ApiQuery, ApiOperation, ApiBearerAuth} from '@nestjs/swagger';
 import {PublicRecipeService} from './publicRecipe.service';
 import {PublicRecipeQueryDto} from './dto/public-recipe-query.dto';
@@ -69,6 +69,32 @@ export class PublicRecipeController {
         }
         const {recipe, created} = await this.publicRecipeService.ensureLocalRecipeFromPublic(dto, ownerId);
         return {recipeId: recipe.id, created};
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @Post(':recipeId/fetch-steps')
+    @ApiOperation({summary: '异步获取并更新食谱步骤'})
+    async fetchSteps(@Param('recipeId') recipeId: string) {
+        if (!recipeId) {
+            throw new HttpException('recipeId is required', HttpStatus.BAD_REQUEST);
+        }
+        const result = await this.publicRecipeService.fetchAndUpdateSteps(recipeId);
+        return result;
+    }
+
+    @ApiBearerAuth()
+    @Post(':recipeId/save-steps')
+    @ApiOperation({summary: '直接保存步骤数据'})
+    async saveSteps(@Param('recipeId') recipeId: string, @Body() body: { steps: any[] }) {
+        if (!recipeId) {
+            throw new HttpException('recipeId is required', HttpStatus.BAD_REQUEST);
+        }
+        if (!body.steps || !Array.isArray(body.steps)) {
+            throw new HttpException('steps array is required', HttpStatus.BAD_REQUEST);
+        }
+        const result = await this.publicRecipeService.saveSteps(recipeId, body.steps);
+        return result;
     }
 }
 

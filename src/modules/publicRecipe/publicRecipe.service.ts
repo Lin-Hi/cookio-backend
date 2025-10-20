@@ -398,18 +398,13 @@ export class PublicRecipeService {
                 }
             }
 
-            // Steps：优先用传入；为空时尝试抓取；同样仅在库里没有步骤时写入
+            // Steps：仅使用传入的步骤，不进行同步抓取（改为异步处理）
             const stepCount = await manager.count(RecipeStep, { where: { recipe: { id: recipeId } } });
-            if (stepCount === 0) {
-                let steps = dto.steps ?? [];
-                if ((!steps || steps.length === 0) && dto.recipeUrl) {
-                    const fetched = await this.fetchRecipeSteps(dto.recipeUrl, recipeId);
-                    steps = (fetched ?? []).map((text: any, idx: number) => ({ number: idx + 1, instruction: String(text) }));
-                }
-                steps.sort((a, b) => (a.number ?? 0) - (b.number ?? 0));
-                for (let i = 0; i < steps.length; i++) {
-                    const stepNo = Number.isFinite(Number(steps[i].number)) ? Number(steps[i].number) : i + 1;
-                    const content = (steps[i].instruction ?? '').toString().trim() || '-';
+            if (stepCount === 0 && dto.steps && dto.steps.length > 0) {
+                dto.steps.sort((a, b) => (a.number ?? 0) - (b.number ?? 0));
+                for (let i = 0; i < dto.steps.length; i++) {
+                    const stepNo = Number.isFinite(Number(dto.steps[i].number)) ? Number(dto.steps[i].number) : i + 1;
+                    const content = (dto.steps[i].instruction ?? '').toString().trim() || '-';
 
                     await manager.save(
                         manager.create(RecipeStep as any, {
@@ -423,6 +418,103 @@ export class PublicRecipeService {
 
             return { recipe, created: !!insertResult.identifiers?.length };
         });
+    }
+
+    /**
+     * 异步获取并更新食谱步骤
+     * 用于在快速导入后补充步骤信息
+     */
+    async fetchAndUpdateSteps(recipeId: string): Promise<{ success: boolean; stepsCount: number }> {
+        try {
+            const recipe = await this.recipeRepo.findOne({ 
+                where: { id: recipeId },
+                relations: ['steps']
+            });
+            
+            if (!recipe) {
+                throw new Error('Recipe not found');
+            }
+
+            if (!recipe.sourceUrl) {
+                throw new Error('Recipe source URL not available');
+            }
+
+            // 获取步骤
+            const fetchedSteps = await this.fetchRecipeSteps(recipe.sourceUrl, recipeId);
+            if (!fetchedSteps || fetchedSteps.length === 0) {
+                return { success: false, stepsCount: 0 };
+            }
+
+            // 保存步骤到数据库（先删除现有步骤，再插入新步骤）
+            await this.dataSource.transaction(async (manager) => {
+                // 先删除现有步骤，避免重复键约束错误
+                await manager.delete(RecipeStep, { recipe: { id: recipeId } });
+                
+                // 插入新步骤
+                for (let idx = 0; idx < fetchedSteps.length; idx++) {
+                    const step = fetchedSteps[idx];
+                    const stepData = {
+                        recipe: { id: recipeId },
+                        step_no: step.step_no || idx + 1,
+                        content: step.content || String(step).trim() || '-'
+                    };
+                    await manager.save(manager.create(RecipeStep, stepData));
+                }
+            });
+
+            return { success: true, stepsCount: fetchedSteps.length };
+        } catch (error) {
+            console.error('[Fetch and Update Steps Error]', error);
+            return { success: false, stepsCount: 0 };
+        }
+    }
+
+    /**
+     * 直接保存步骤数据到数据库
+     * 用于保存已经获取的步骤数据
+     */
+    async saveSteps(recipeId: string, steps: any[]): Promise<{ success: boolean; stepsCount: number }> {
+        try {
+            const recipe = await this.recipeRepo.findOne({ 
+                where: { id: recipeId },
+                relations: ['steps']
+            });
+            
+            if (!recipe) {
+                throw new Error('Recipe not found');
+            }
+
+            // 删除现有步骤（如果有）
+            if (recipe.steps && recipe.steps.length > 0) {
+                await this.dataSource.transaction(async (manager) => {
+                    for (const step of recipe.steps) {
+                        await manager.remove(step);
+                    }
+                });
+            }
+
+            // 转换步骤数据格式
+            const stepsToSave = steps.map((step, idx) => ({
+                step_no: step.step_no || idx + 1,
+                content: step.content || (typeof step === 'string' ? step.trim() : String(step).trim()) || '-'
+            }));
+
+            // 保存步骤到数据库
+            await this.dataSource.transaction(async (manager) => {
+                for (const step of stepsToSave) {
+                    const createdStep = manager.create(RecipeStep, {
+                        ...step,
+                        recipe: recipe
+                    });
+                    await manager.save(createdStep);
+                }
+            });
+
+            return { success: true, stepsCount: stepsToSave.length };
+        } catch (error) {
+            console.error('[Save Steps Error]', error);
+            return { success: false, stepsCount: 0 };
+        }
     }
 
 
