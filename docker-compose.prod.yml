@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # PostgreSQL 数据库
+  # PostgreSQL
   postgres:
     image: postgres:16-alpine
     container_name: cookio-postgres
@@ -22,7 +22,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # Redis 缓存
+  # Redis
   redis:
     image: redis:7-alpine
     container_name: cookio-redis
@@ -37,28 +37,28 @@ services:
       timeout: 5s
       retries: 5
 
-  # 后端服务
+  # backend
   backend:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: cookio-backend
     environment:
-      # 数据库配置
+      # database
       DATABASE_HOST: postgres
       DATABASE_PORT: 5432
       DATABASE_USER: cookio_user
       DATABASE_PASSWORD: cookio_secure_password_2024
       DATABASE_NAME: cookio_db
 
-      # Redis配置
+      # Redis
       REDIS_HOST: redis
       REDIS_PORT: 6379
 
-      # JWT配置
+      # JWT
       JWT_SECRET: cookio_jwt_secret_key_2024_very_secure
 
-      # 服务器配置
+      # server
       PORT: 8080
       NODE_ENV: production
     ports:
