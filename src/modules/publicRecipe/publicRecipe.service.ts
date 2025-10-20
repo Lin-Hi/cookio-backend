@@ -68,16 +68,33 @@ export class PublicRecipeService {
         private readonly dataSource: DataSource,
     ) {}
 
-    // private readonly EDAMAM_APP_ID = '34930e1e';428ba23e
     private readonly EDAMAM_APP_ID = '428ba23e';
-    // private readonly EDAMAM_APP_KEY = '384dedda7dd0e2979b3ba2316ee4b704';
     private readonly EDAMAM_APP_KEY = '4604940533a1b7f9d05b05e83bb77c33';
     private readonly EDAMAM_BASE_URL = 'https://api.edamam.com/api/recipes/v2';
-    // private readonly SPOONACULAR_API_KEY = '680da435be754ceaa046bb1a3be1e563';
-    // private readonly SPOONACULAR_API_KEY = '4364dbc551284eceb8ceaa815db7c340';
-    // private readonly SPOONACULAR_API_KEY = '6522a0b791764a61839b38af2c10510b';
-    private readonly SPOONACULAR_API_KEY = '609b48ffbea84bb791e19acb10706760';
+
+    private readonly SPOONACULAR_API_KEYS = [
+        '680da435be754ceaa046bb1a3be1e563',
+        '4364dbc551284eceb8ceaa815db7c340',
+        '6522a0b791764a61839b38af2c10510b',
+        '609b48ffbea84bb791e19acb10706760'
+    ];
+    private currentKeyIndex = 0;
     private readonly SPOONACULAR_BASE_URL = 'https://api.spoonacular.com';
+
+    /**
+     * 获取当前可用的 Spoonacular API 密钥
+     */
+    private getCurrentApiKey(): string {
+        return this.SPOONACULAR_API_KEYS[this.currentKeyIndex];
+    }
+
+    /**
+     * 切换到下一个 API 密钥
+     */
+    private switchToNextApiKey(): boolean {
+        this.currentKeyIndex = (this.currentKeyIndex + 1) % this.SPOONACULAR_API_KEYS.length;
+        return this.currentKeyIndex === 0; // 如果回到第一个密钥，说明所有密钥都用完了
+    }
 
     /**
      * 搜索 Edamam 公共菜谱并转换为统一格式
@@ -208,43 +225,71 @@ export class PublicRecipeService {
     async fetchRecipeSteps(recipeUrl: string, recipeId?: string) {
         // 如果没有提供 recipeId，生成一个临时的
         const id = recipeId || 'recipe';
-        try {
-            const response = await axios.get<SpoonacularRecipeResponse>(
-                `${this.SPOONACULAR_BASE_URL}/recipes/extract`,
-                {
-                    params: {
-                        url: recipeUrl,
-                        forceExtraction: true,
-                        analyze: false,
-                        includeNutrition: false,
-                        includeTaste: false,
-                        apiKey: this.SPOONACULAR_API_KEY,
-                    },
-                    timeout: 60000,
-                }
-            );
-
-            // 提取并转换步骤
-            if (response.data.analyzedInstructions && response.data.analyzedInstructions.length > 0) {
-                const allSteps = response.data.analyzedInstructions.flatMap(
-                    (instruction) => instruction.steps
+        
+        let attempts = 0;
+        const maxAttempts = this.SPOONACULAR_API_KEYS.length;
+        
+        while (attempts < maxAttempts) {
+            try {
+                const response = await axios.get<SpoonacularRecipeResponse>(
+                    `${this.SPOONACULAR_BASE_URL}/recipes/extract`,
+                    {
+                        params: {
+                            url: recipeUrl,
+                            forceExtraction: true,
+                            analyze: false,
+                            includeNutrition: false,
+                            includeTaste: false,
+                            apiKey: this.getCurrentApiKey(),
+                        },
+                        timeout: 60000,
+                    }
                 );
 
-                return allSteps.map((step) => ({
-                    id: `${id}-step-${step.number}`,
-                    step_no: step.number,
-                    content: step.step,
-                    image_url: null,
-                }));
-            }
+                // 提取并转换步骤
+                if (response.data.analyzedInstructions && response.data.analyzedInstructions.length > 0) {
+                    const allSteps = response.data.analyzedInstructions.flatMap(
+                        (instruction) => instruction.steps
+                    );
 
-            // 如果没有步骤，返回空数组
-            return [];
-        } catch (error) {
-            // 如果 Spoonacular API 调用失败，返回空步骤数组
-            console.error('Failed to fetch steps from Spoonacular:', error);
-            return [];
+                    return allSteps.map((step) => ({
+                        id: `${id}-step-${step.number}`,
+                        step_no: step.number,
+                        content: step.step,
+                        image_url: null,
+                    }));
+                }
+
+                // 如果没有步骤，返回空数组
+                return [];
+            } catch (error) {
+                attempts++;
+                
+                // 检查是否是402错误（配额用完）
+                if (axios.isAxiosError(error) && error.response?.status === 402) {
+                    console.warn(`API key ${this.getCurrentApiKey()} quota exceeded, switching to next key...`);
+                    
+                    // 切换到下一个API密钥
+                    const allKeysUsed = this.switchToNextApiKey();
+                    
+                    if (allKeysUsed) {
+                        console.error('All Spoonacular API keys have been exhausted');
+                        return [];
+                    }
+                    
+                    // 继续尝试下一个密钥
+                    continue;
+                }
+                
+                // 其他错误，记录并返回空数组
+                console.error('Failed to fetch steps from Spoonacular:', error);
+                return [];
+            }
         }
+        
+        // 如果所有密钥都尝试过了，返回空数组
+        console.error('All API keys exhausted, returning empty steps');
+        return [];
     }
 
     /**
@@ -353,18 +398,13 @@ export class PublicRecipeService {
                 }
             }
 
-            // Steps：优先用传入；为空时尝试抓取；同样仅在库里没有步骤时写入
+            // Steps：仅使用传入的步骤，不进行同步抓取（改为异步处理）
             const stepCount = await manager.count(RecipeStep, { where: { recipe: { id: recipeId } } });
-            if (stepCount === 0) {
-                let steps = dto.steps ?? [];
-                if ((!steps || steps.length === 0) && dto.recipeUrl) {
-                    const fetched = await this.fetchRecipeSteps(dto.recipeUrl, recipeId);
-                    steps = (fetched ?? []).map((text: any, idx: number) => ({ number: idx + 1, instruction: String(text) }));
-                }
-                steps.sort((a, b) => (a.number ?? 0) - (b.number ?? 0));
-                for (let i = 0; i < steps.length; i++) {
-                    const stepNo = Number.isFinite(Number(steps[i].number)) ? Number(steps[i].number) : i + 1;
-                    const content = (steps[i].instruction ?? '').toString().trim() || '-';
+            if (stepCount === 0 && dto.steps && dto.steps.length > 0) {
+                dto.steps.sort((a, b) => (a.number ?? 0) - (b.number ?? 0));
+                for (let i = 0; i < dto.steps.length; i++) {
+                    const stepNo = Number.isFinite(Number(dto.steps[i].number)) ? Number(dto.steps[i].number) : i + 1;
+                    const content = (dto.steps[i].instruction ?? '').toString().trim() || '-';
 
                     await manager.save(
                         manager.create(RecipeStep as any, {
@@ -378,6 +418,103 @@ export class PublicRecipeService {
 
             return { recipe, created: !!insertResult.identifiers?.length };
         });
+    }
+
+    /**
+     * 异步获取并更新食谱步骤
+     * 用于在快速导入后补充步骤信息
+     */
+    async fetchAndUpdateSteps(recipeId: string): Promise<{ success: boolean; stepsCount: number }> {
+        try {
+            const recipe = await this.recipeRepo.findOne({ 
+                where: { id: recipeId },
+                relations: ['steps']
+            });
+            
+            if (!recipe) {
+                throw new Error('Recipe not found');
+            }
+
+            if (!recipe.sourceUrl) {
+                throw new Error('Recipe source URL not available');
+            }
+
+            // 获取步骤
+            const fetchedSteps = await this.fetchRecipeSteps(recipe.sourceUrl, recipeId);
+            if (!fetchedSteps || fetchedSteps.length === 0) {
+                return { success: false, stepsCount: 0 };
+            }
+
+            // 保存步骤到数据库（先删除现有步骤，再插入新步骤）
+            await this.dataSource.transaction(async (manager) => {
+                // 先删除现有步骤，避免重复键约束错误
+                await manager.delete(RecipeStep, { recipe: { id: recipeId } });
+                
+                // 插入新步骤
+                for (let idx = 0; idx < fetchedSteps.length; idx++) {
+                    const step = fetchedSteps[idx];
+                    const stepData = {
+                        recipe: { id: recipeId },
+                        step_no: step.step_no || idx + 1,
+                        content: step.content || String(step).trim() || '-'
+                    };
+                    await manager.save(manager.create(RecipeStep, stepData));
+                }
+            });
+
+            return { success: true, stepsCount: fetchedSteps.length };
+        } catch (error) {
+            console.error('[Fetch and Update Steps Error]', error);
+            return { success: false, stepsCount: 0 };
+        }
+    }
+
+    /**
+     * 直接保存步骤数据到数据库
+     * 用于保存已经获取的步骤数据
+     */
+    async saveSteps(recipeId: string, steps: any[]): Promise<{ success: boolean; stepsCount: number }> {
+        try {
+            const recipe = await this.recipeRepo.findOne({ 
+                where: { id: recipeId },
+                relations: ['steps']
+            });
+            
+            if (!recipe) {
+                throw new Error('Recipe not found');
+            }
+
+            // 删除现有步骤（如果有）
+            if (recipe.steps && recipe.steps.length > 0) {
+                await this.dataSource.transaction(async (manager) => {
+                    for (const step of recipe.steps) {
+                        await manager.remove(step);
+                    }
+                });
+            }
+
+            // 转换步骤数据格式
+            const stepsToSave = steps.map((step, idx) => ({
+                step_no: step.step_no || idx + 1,
+                content: step.content || (typeof step === 'string' ? step.trim() : String(step).trim()) || '-'
+            }));
+
+            // 保存步骤到数据库
+            await this.dataSource.transaction(async (manager) => {
+                for (const step of stepsToSave) {
+                    const createdStep = manager.create(RecipeStep, {
+                        ...step,
+                        recipe: recipe
+                    });
+                    await manager.save(createdStep);
+                }
+            });
+
+            return { success: true, stepsCount: stepsToSave.length };
+        } catch (error) {
+            console.error('[Save Steps Error]', error);
+            return { success: false, stepsCount: 0 };
+        }
     }
 
 

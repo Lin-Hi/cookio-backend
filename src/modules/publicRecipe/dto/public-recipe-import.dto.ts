@@ -60,9 +60,9 @@ export class PublicRecipeImportDto {
     @IsArray() @ValidateNested({ each: true }) @Type(() => ImportIngredientDto)
     ingredients!: ImportIngredientDto[];
 
-    @ApiProperty({ type: [ImportStepDto] })
-    @IsArray() @ValidateNested({ each: true }) @Type(() => ImportStepDto)
-    steps!: ImportStepDto[];
+    @ApiPropertyOptional({ type: [ImportStepDto] })
+    @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => ImportStepDto)
+    steps?: ImportStepDto[];
 
     @ApiPropertyOptional({ description: '额外的源数据（calories, dietLabels, healthLabels等）' })
     @IsOptional() sourceData?: any;
