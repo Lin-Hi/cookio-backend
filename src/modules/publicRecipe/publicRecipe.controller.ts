@@ -12,40 +12,40 @@ export class PublicRecipeController {
     }
 
     @Get()
-    @ApiOperation({summary: '搜索公共菜谱', description: '从 Edamam API 搜索公共菜谱'})
-    @ApiQuery({name: 'q', required: false, description: '搜索关键词，例如 "chicken"'})
-    @ApiQuery({name: 'mealType', required: false, description: '菜肴类型'})
-    @ApiQuery({name: 'cuisineType', required: false, description: '菜系类型'})
-    @ApiQuery({name: 'dishType', required: false, description: '料理类型'})
-    @ApiQuery({name: 'health', required: false, description: '健康标签'})
-    @ApiQuery({name: 'diet', required: false, description: '饮食标签'})
-    @ApiQuery({name: 'page', required: false, description: '页码，默认 1'})
-    @ApiQuery({name: 'pageSize', required: false, description: '每页数量，默认 20'})
+    @ApiOperation({summary: 'Search public recipes', description: 'Search public recipes from Edamam API'})
+    @ApiQuery({name: 'q', required: false, description: 'Search keywords, e.g. "chicken"'})
+    @ApiQuery({name: 'mealType', required: false, description: 'Meal type'})
+    @ApiQuery({name: 'cuisineType', required: false, description: 'Cuisine type'})
+    @ApiQuery({name: 'dishType', required: false, description: 'Dish type'})
+    @ApiQuery({name: 'health', required: false, description: 'Health labels'})
+    @ApiQuery({name: 'diet', required: false, description: 'Diet labels'})
+    @ApiQuery({name: 'page', required: false, description: 'Page number, default 1'})
+    @ApiQuery({name: 'pageSize', required: false, description: 'Items per page, default 20'})
     searchPublicRecipes(@Query() query: PublicRecipeQueryDto) {
         return this.publicRecipeService.searchPublicRecipes(query);
     }
 
     @Get('steps')
     @ApiOperation({
-        summary: '获取菜谱步骤',
-        description: '从 Spoonacular API 提取指定 URL 的菜谱步骤'
+        summary: 'Get recipe steps',
+        description: 'Extract recipe steps from Spoonacular API for specified URL'
     })
     @ApiQuery({
         name: 'recipeUrl',
         required: true,
-        description: '菜谱原始 URL，例如 "https://www.seriouseats.com/chicken-recipe"'
+        description: 'Original recipe URL, e.g. "https://www.seriouseats.com/chicken-recipe"'
     })
     @ApiQuery({
         name: 'recipeId',
         required: false,
-        description: '菜谱 ID（可选）'
+        description: 'Recipe ID (optional)'
     })
     async getRecipeSteps(
         @Query('recipeUrl') recipeUrl: string,
         @Query('recipeId') recipeId?: string
     ) {
         if (!recipeUrl) {
-            throw new HttpException('recipeUrl 参数是必需的', HttpStatus.BAD_REQUEST);
+            throw new HttpException('recipeUrl parameter is required', HttpStatus.BAD_REQUEST);
         }
 
         const steps = await this.publicRecipeService.fetchRecipeSteps(recipeUrl, recipeId);
@@ -61,7 +61,7 @@ export class PublicRecipeController {
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth()
     @Post('import')
-    @ApiOperation({summary: '将公共食谱导入本地数据库中'})
+    @ApiOperation({summary: 'Import public recipe into local database'})
     async importRecipe(@Req() req: any, @Body() dto: PublicRecipeImportDto) {
         const ownerId: string | undefined = req?.user?.id || req?.user?.userId || req?.user?.sub;
         if (!ownerId) {
@@ -74,7 +74,7 @@ export class PublicRecipeController {
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth()
     @Post(':recipeId/fetch-steps')
-    @ApiOperation({summary: '异步获取并更新食谱步骤'})
+    @ApiOperation({summary: 'Asynchronously fetch and update recipe steps'})
     async fetchSteps(@Param('recipeId') recipeId: string) {
         if (!recipeId) {
             throw new HttpException('recipeId is required', HttpStatus.BAD_REQUEST);
@@ -85,7 +85,7 @@ export class PublicRecipeController {
 
     @ApiBearerAuth()
     @Post(':recipeId/save-steps')
-    @ApiOperation({summary: '直接保存步骤数据'})
+    @ApiOperation({summary: 'Directly save step data'})
     async saveSteps(@Param('recipeId') recipeId: string, @Body() body: { steps: any[] }) {
         if (!recipeId) {
             throw new HttpException('recipeId is required', HttpStatus.BAD_REQUEST);

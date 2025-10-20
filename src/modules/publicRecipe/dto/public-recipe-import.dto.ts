@@ -3,13 +3,13 @@ import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ImportIngredientDto {
-    @ApiProperty({ example: '番茄' })
+    @ApiProperty({ example: 'Tomato' })
     @IsString() name!: string;
     
     @ApiPropertyOptional({ example: '2' })
     @IsOptional() @IsString() quantity?: string;
     
-    @ApiPropertyOptional({ example: '个' })
+    @ApiPropertyOptional({ example: 'pieces' })
     @IsOptional() @IsString() unit?: string;
 }
 
@@ -17,7 +17,7 @@ export class ImportStepDto {
     @ApiProperty({ example: 1 })
     @IsInt() @Min(1) number!: number;
     
-    @ApiProperty({ example: '将番茄洗净切块' })
+    @ApiProperty({ example: 'Wash and cut tomatoes into pieces' })
     @IsString() instruction!: string;
 }
 
@@ -28,10 +28,10 @@ export class PublicRecipeImportDto {
     @ApiProperty({ example: 'recipe_abc123' })
     @IsString() sourceId!: string;
 
-    @ApiProperty({ example: '番茄炒蛋' })
+    @ApiProperty({ example: 'Scrambled Eggs with Tomatoes' })
     @IsString() title!: string;
     
-    @ApiPropertyOptional({ example: '经典的家常菜' })
+    @ApiPropertyOptional({ example: 'Classic home-style dish' })
     @IsOptional() @IsString() description?: string;
 
     @ApiPropertyOptional({ example: 'https://example.com/recipe/123' })
@@ -41,19 +41,19 @@ export class PublicRecipeImportDto {
     @IsOptional() @IsUrl() imageUrl?: string;
 
     // Recipe metadata
-    @ApiPropertyOptional({ example: 'Chinese', description: '菜谱分类/菜系' })
+    @ApiPropertyOptional({ example: 'Chinese', description: 'Recipe category/cuisine' })
     @IsOptional() @IsString() category?: string;
     
-    @ApiPropertyOptional({ example: 'Easy', description: '难度：Easy, Medium, Hard' })
+    @ApiPropertyOptional({ example: 'Easy', description: 'Difficulty: Easy, Medium, Hard' })
     @IsOptional() @IsString() difficulty?: string;
     
-    @ApiPropertyOptional({ example: '30分钟', description: '烹饪时间' })
+    @ApiPropertyOptional({ example: '30 minutes', description: 'Cooking time' })
     @IsOptional() @IsString() cookTime?: string;
     
-    @ApiPropertyOptional({ example: 4, description: '份数' })
+    @ApiPropertyOptional({ example: 4, description: 'Servings' })
     @IsOptional() @IsNumber() servings?: number;
 
-    @ApiPropertyOptional({ example: 'Chef Wang', description: '原始作者名称' })
+    @ApiPropertyOptional({ example: 'Chef Wang', description: 'Original author name' })
     @IsOptional() @IsString() author?: string;
 
     @ApiProperty({ type: [ImportIngredientDto] })
@@ -64,6 +64,6 @@ export class PublicRecipeImportDto {
     @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => ImportStepDto)
     steps?: ImportStepDto[];
 
-    @ApiPropertyOptional({ description: '额外的源数据（calories, dietLabels, healthLabels等）' })
+    @ApiPropertyOptional({ description: 'Additional source data (calories, dietLabels, healthLabels, etc.)' })
     @IsOptional() sourceData?: any;
 }

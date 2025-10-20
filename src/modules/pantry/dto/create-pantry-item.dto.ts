@@ -14,7 +14,7 @@ export class CreatePantryItemDto {
     @IsOptional() @IsString() @MaxLength(40)
     unit?: string;
 
-    @ApiPropertyOptional({ maxLength: 100, example: '蔬菜' })
+    @ApiPropertyOptional({ maxLength: 100, example: 'Vegetables' })
     @IsOptional() @IsString() @MaxLength(100)
     category?: string;
 
@@ -22,7 +22,7 @@ export class CreatePantryItemDto {
     @IsOptional() @IsString()
     image_url?: string;
 
-    @ApiPropertyOptional({ example: '新鲜的有机番茄，适合做沙拉' })
+    @ApiPropertyOptional({ example: 'Fresh organic tomatoes, perfect for salads' })
     @IsOptional() @IsString()
     description?: string;
 

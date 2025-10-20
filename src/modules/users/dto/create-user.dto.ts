@@ -8,7 +8,7 @@ export class CreateUserDto {
 
     @ApiProperty({ example: 'password123', minLength: 6 })
     @IsString()
-    @MinLength(6, { message: '密码至少需要6个字符' })
+    @MinLength(6, { message: 'Password must be at least 6 characters long' })
     password!: string;
 
     @ApiProperty({ required: false })

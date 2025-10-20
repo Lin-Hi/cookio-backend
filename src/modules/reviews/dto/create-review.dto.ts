@@ -5,12 +5,12 @@ export class ReviewContentValidator implements ValidatorConstraintInterface {
     validate(_value: any, args: ValidationArguments) {
         const obj = args.object as CreateReviewDto;
 
-        // 如果有评分但没有内容，验证失败
+        // If there's a rating but no content, validation fails
         if (obj.rating && (!obj.content || obj.content.trim() === '')) {
             return false;
         }
 
-        // 如果没有评分，必须有内容
+        // If there's no rating, there must be content
         if (!obj.rating && (!obj.content || obj.content.trim() === '')) {
             return false;
         }
