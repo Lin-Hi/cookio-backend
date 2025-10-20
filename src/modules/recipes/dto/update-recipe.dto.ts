@@ -11,27 +11,59 @@ import { Type } from 'class-transformer';
 // Re-declare child DTOs because PartialType(CreateRecipeDto) would make
 // children optional but also keep them nested-validated when provided.
 class UpdateIngredientDto {
-    @ApiProperty() @IsString() @IsNotEmpty()
+    @ApiProperty({ 
+        example: 'Tomato', 
+        description: 'Ingredient name' 
+    })
+    @IsString() @IsNotEmpty()
     name!: string;
 
-    @ApiProperty({ required: false }) @IsOptional() @IsString()
+    @ApiProperty({ 
+        required: false, 
+        example: '2', 
+        description: 'Quantity of the ingredient' 
+    })
+    @IsOptional() @IsString()
     quantity?: string;
 
-    @ApiProperty({ required: false }) @IsOptional() @IsString()
+    @ApiProperty({ 
+        required: false, 
+        example: 'pieces', 
+        description: 'Unit of measurement' 
+    })
+    @IsOptional() @IsString()
     unit?: string;
 
-    @ApiProperty({ required: false }) @IsOptional() @IsInt()
+    @ApiProperty({ 
+        required: false, 
+        example: 0, 
+        description: 'Display order position' 
+    })
+    @IsOptional() @IsInt()
     position?: number;
 }
 
 class UpdateStepDto {
-    @ApiProperty() @IsInt()
+    @ApiProperty({ 
+        example: 1, 
+        description: 'Step number' 
+    })
+    @IsInt()
     step_no!: number;
 
-    @ApiProperty() @IsString() @IsNotEmpty()
+    @ApiProperty({ 
+        example: 'Wash and chop the tomatoes', 
+        description: 'Instruction text for this step' 
+    })
+    @IsString() @IsNotEmpty()
     content!: string;
 
-    @ApiProperty({ required: false }) @IsOptional() @IsString()
+    @ApiProperty({ 
+        required: false, 
+        example: 'https://example.com/step1.jpg', 
+        description: 'Optional image URL for this step' 
+    })
+    @IsOptional() @IsString()
     image_url?: string;
 }
 
@@ -39,11 +71,25 @@ export class UpdateRecipeDto extends PartialType(CreateRecipeDto) {
     // Override "owner_id": usually not editable; ignore if provided.
     owner_id?: never;
 
-    @ApiProperty({ type: [UpdateIngredientDto], required: false })
+    @ApiProperty({ 
+        type: [UpdateIngredientDto], 
+        required: false,
+        description: 'Updated ingredients list (replaces existing)',
+        example: [
+            { name: 'Tomato', quantity: '3', unit: 'pieces', position: 0 }
+        ]
+    })
     @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => UpdateIngredientDto)
     ingredients?: UpdateIngredientDto[];
 
-    @ApiProperty({ type: [UpdateStepDto], required: false })
+    @ApiProperty({ 
+        type: [UpdateStepDto], 
+        required: false,
+        description: 'Updated steps list (replaces existing)',
+        example: [
+            { step_no: 1, content: 'Wash and chop the tomatoes' }
+        ]
+    })
     @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => UpdateStepDto)
     steps?: UpdateStepDto[];
 }
