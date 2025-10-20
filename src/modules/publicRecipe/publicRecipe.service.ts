@@ -82,22 +82,22 @@ export class PublicRecipeService {
     private readonly SPOONACULAR_BASE_URL = 'https://api.spoonacular.com';
 
     /**
-     * 获取当前可用的 Spoonacular API 密钥
+     * Get current available Spoonacular API key
      */
     private getCurrentApiKey(): string {
         return this.SPOONACULAR_API_KEYS[this.currentKeyIndex];
     }
 
     /**
-     * 切换到下一个 API 密钥
+     * Switch to next API key
      */
     private switchToNextApiKey(): boolean {
         this.currentKeyIndex = (this.currentKeyIndex + 1) % this.SPOONACULAR_API_KEYS.length;
-        return this.currentKeyIndex === 0; // 如果回到第一个密钥，说明所有密钥都用完了
+        return this.currentKeyIndex === 0; // If back to first key, all keys have been used
     }
 
     /**
-     * 搜索 Edamam 公共菜谱并转换为统一格式
+     * Search Edamam public recipes and convert to unified format
      */
     async searchPublicRecipes(query: PublicRecipeQueryDto) {
         try {
@@ -107,12 +107,12 @@ export class PublicRecipeService {
                 app_key: this.EDAMAM_APP_KEY,
             };
 
-            // 添加搜索关键词（如果没有其他参数，q 是必需的）
+            // Add search keywords (q is required if no other parameters)
             if (query.q) {
                 params.q = query.q;
             }
 
-            // 添加可选过滤参数
+            // Add optional filter parameters
             if (query.mealType) {
                 params.mealType = query.mealType;
             }
@@ -129,7 +129,7 @@ export class PublicRecipeService {
                 params.diet = query.diet;
             }
 
-            // 分页参数
+            // Pagination parameters
             const pageSize = query.pageSize || 20;
             const from = ((query.page || 1) - 1) * pageSize;
             const to = from + pageSize;
@@ -138,13 +138,13 @@ export class PublicRecipeService {
             params.to = to;
             params.random = true;
             
-            // 调用 Edamam API
+            // Call Edamam API
             const response = await axios.get<EdamamResponse>(this.EDAMAM_BASE_URL, {
                 params,
                 timeout: 10000,
             });
 
-            // 转换为统一格式
+            // Convert to unified format
             const items = response.data.hits.map((hit) => this.transformRecipe(hit.recipe));
 
             return {
@@ -158,28 +158,28 @@ export class PublicRecipeService {
         } catch (error) {
             if (axios.isAxiosError(error)) {
                 throw new HttpException(
-                    `外部 API 调用失败: ${error.message}`,
+                    `External API call failed: ${error.message}`,
                     error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR,
                 );
             }
-            throw new HttpException('搜索菜谱时发生错误', HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new HttpException('Error occurred while searching recipes', HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     /**
-     * 将 Edamam 菜谱格式转换为统一的返回格式
+     * Convert Edamam recipe format to unified return format
      */
     private transformRecipe(edamamRecipe: EdamamRecipe) {
-        // 从 URI 中提取 ID
+        // Extract ID from URI
         const recipeId = edamamRecipe.uri.split('#recipe_')[1] || edamamRecipe.uri;
 
-        // 难度评估（基于食材数量和烹饪时间）
+        // Difficulty assessment (based on ingredient count and cooking time)
         const difficulty = this.estimateDifficulty(
             edamamRecipe.ingredients.length,
             edamamRecipe.totalTime,
         );
 
-        // 转换食材格式 - 返回全部食材
+        // Convert ingredient format - return all ingredients
         const ingredients = edamamRecipe.ingredients.map((ing, index) => ({
             id: `${recipeId}-ing-${index}`,
             name: ing.food,
@@ -188,10 +188,10 @@ export class PublicRecipeService {
             position: index,
         }));
 
-        // 格式化烹饪时间
+        // Format cooking time
         const cookTime = this.formatCookTime(edamamRecipe.totalTime);
 
-        // 菜系类型 - 保持原始英文
+        // Cuisine type - keep original English
         const category = edamamRecipe.cuisineType?.[0] || edamamRecipe.dishType?.[0] || 'Other';
 
         return {
@@ -220,10 +220,10 @@ export class PublicRecipeService {
     }
 
     /**
-     * 从 Spoonacular API 获取菜谱步骤（公开方法）
+     * Get recipe steps from Spoonacular API (public method)
      */
     async fetchRecipeSteps(recipeUrl: string, recipeId?: string) {
-        // 如果没有提供 recipeId，生成一个临时的
+        // If no recipeId provided, generate a temporary one
         const id = recipeId || 'recipe';
         
         let attempts = 0;
@@ -246,7 +246,7 @@ export class PublicRecipeService {
                     }
                 );
 
-                // 提取并转换步骤
+                // Extract and convert steps
                 if (response.data.analyzedInstructions && response.data.analyzedInstructions.length > 0) {
                     const allSteps = response.data.analyzedInstructions.flatMap(
                         (instruction) => instruction.steps
@@ -260,16 +260,16 @@ export class PublicRecipeService {
                     }));
                 }
 
-                // 如果没有步骤，返回空数组
+                // If no steps, return empty array
                 return [];
             } catch (error) {
                 attempts++;
                 
-                // 检查是否是402错误（配额用完）
+                // Check if 402 error (quota exhausted)
                 if (axios.isAxiosError(error) && error.response?.status === 402) {
                     console.warn(`API key ${this.getCurrentApiKey()} quota exceeded, switching to next key...`);
                     
-                    // 切换到下一个API密钥
+                    // Switch to next API key
                     const allKeysUsed = this.switchToNextApiKey();
                     
                     if (allKeysUsed) {
@@ -277,23 +277,23 @@ export class PublicRecipeService {
                         return [];
                     }
                     
-                    // 继续尝试下一个密钥
+                    // Continue trying next key
                     continue;
                 }
                 
-                // 其他错误，记录并返回空数组
+                // Other errors, log and return empty array
                 console.error('Failed to fetch steps from Spoonacular:', error);
                 return [];
             }
         }
         
-        // 如果所有密钥都尝试过了，返回空数组
+        // If all keys have been tried, return empty array
         console.error('All API keys exhausted, returning empty steps');
         return [];
     }
 
     /**
-     * 评估难度 - 英文
+     * Assess difficulty - English
      */
     private estimateDifficulty(ingredientCount: number, totalTime: number): string {
         if (ingredientCount <= 5 && totalTime <= 30) {
@@ -306,7 +306,7 @@ export class PublicRecipeService {
     }
 
     /**
-     * 格式化烹饪时间 - 英文
+     * Format cooking time - English
      */
     private formatCookTime(minutes: number): string {
         if (!minutes || minutes === 0) {
@@ -321,7 +321,7 @@ export class PublicRecipeService {
     }
 
     /**
-     * 格式化菜系类型 - 首字母大写
+     * Format cuisine type - capitalize first letter
      */
     private formatCategory(category: string): string {
         return category.charAt(0).toUpperCase() + category.slice(1);
@@ -336,14 +336,14 @@ export class PublicRecipeService {
      */
     async ensureLocalRecipeFromPublic(dto: PublicRecipeImportDto, ownerId: string) {
         const normSource = dto.source; // 'edamam' | 'spoonacular'
-        const normSourceId = String(dto.sourceId).trim().toLowerCase(); // 规范化，避免大小写/空格造成重复
+        const normSourceId = String(dto.sourceId).trim().toLowerCase(); // Normalize to avoid case/space duplicates
 
         return this.dataSource.transaction(async (manager) => {
-            // 1) fast path：已存在则直接返回
+            // 1) Fast path: if exists, return directly
             const existed = await manager.findOne(Recipe, { where: { source: normSource, sourceId: normSourceId } });
             if (existed) return { recipe: existed, created: false };
 
-            // 2) 尝试插入，使用 ON CONFLICT DO NOTHING 来处理并发/重复情况
+            // 2) Try insert, use ON CONFLICT DO NOTHING to handle concurrency/duplicates
             const insertResult = await manager
                 .createQueryBuilder()
                 .insert()
@@ -364,24 +364,24 @@ export class PublicRecipeService {
                     is_published: false,
                     owner: { id: ownerId } as any,
                 })
-                .orIgnore() // 如果违反唯一约束，则忽略插入
-                .returning(['id']) // PG 可返回 id；若被 DO NOTHING，不会返回行
+                .orIgnore() // If unique constraint violated, ignore insert
+                .returning(['id']) // PG can return id; if DO NOTHING, no row returned
                 .execute();
 
             let recipeId: string | undefined = insertResult.identifiers?.[0]?.id || insertResult.generatedMaps?.[0]?.id;
 
-            // 3) 如果因为并发被 DO NOTHING，则回查已存在的记录
+            // 3) If DO NOTHING due to concurrency, recheck existing record
             if (!recipeId) {
                 const already = await manager.findOneOrFail(Recipe, { where: { source: normSource, sourceId: normSourceId } });
                 recipeId = already.id;
             }
 
-            // 4) 用拿到的 recipeId 继续落配料/步骤（若是并发插入，这里可能已存在配料/步骤。
-            //    为“最小改动”，我们只在首次插入时写入；若并发导致非首次，可加存在性检查或忽略错误）
+            // 4) Use obtained recipeId to continue with ingredients/steps (if concurrent insert, ingredients/steps may already exist.
+            //    For "minimal changes", we only write on first insert; if concurrency causes non-first, add existence check or ignore errors)
 
             const recipe = await manager.findOneOrFail(Recipe, { where: { id: recipeId } });
 
-            // Ingredients（仅当首次插入才写；简单判断：如果传入有 ingredients 且当前库里为 0）
+            // Ingredients (only write on first insert; simple check: if passed ingredients and current DB has 0)
             const ingCount = await manager.count(RecipeIngredient, { where: { recipe: { id: recipeId } } });
             if (ingCount === 0 && (dto.ingredients?.length ?? 0) > 0) {
                 for (let i = 0; i < dto.ingredients.length; i++) {
@@ -398,7 +398,7 @@ export class PublicRecipeService {
                 }
             }
 
-            // Steps：仅使用传入的步骤，不进行同步抓取（改为异步处理）
+            // Steps: only use passed steps, no synchronous fetching (changed to async processing)
             const stepCount = await manager.count(RecipeStep, { where: { recipe: { id: recipeId } } });
             if (stepCount === 0 && dto.steps && dto.steps.length > 0) {
                 dto.steps.sort((a, b) => (a.number ?? 0) - (b.number ?? 0));
@@ -421,8 +421,8 @@ export class PublicRecipeService {
     }
 
     /**
-     * 异步获取并更新食谱步骤
-     * 用于在快速导入后补充步骤信息
+     * Asynchronously fetch and update recipe steps
+     * Used to supplement step information after quick import
      */
     async fetchAndUpdateSteps(recipeId: string): Promise<{ success: boolean; stepsCount: number }> {
         try {
@@ -439,18 +439,18 @@ export class PublicRecipeService {
                 throw new Error('Recipe source URL not available');
             }
 
-            // 获取步骤
+            // Get steps
             const fetchedSteps = await this.fetchRecipeSteps(recipe.sourceUrl, recipeId);
             if (!fetchedSteps || fetchedSteps.length === 0) {
                 return { success: false, stepsCount: 0 };
             }
 
-            // 保存步骤到数据库（先删除现有步骤，再插入新步骤）
+            // Save steps to database (delete existing steps first, then insert new ones)
             await this.dataSource.transaction(async (manager) => {
-                // 先删除现有步骤，避免重复键约束错误
+                // Delete existing steps first to avoid duplicate key constraint errors
                 await manager.delete(RecipeStep, { recipe: { id: recipeId } });
                 
-                // 插入新步骤
+                // Insert new steps
                 for (let idx = 0; idx < fetchedSteps.length; idx++) {
                     const step = fetchedSteps[idx];
                     const stepData = {
@@ -470,8 +470,8 @@ export class PublicRecipeService {
     }
 
     /**
-     * 直接保存步骤数据到数据库
-     * 用于保存已经获取的步骤数据
+     * Directly save step data to database
+     * Used to save already fetched step data
      */
     async saveSteps(recipeId: string, steps: any[]): Promise<{ success: boolean; stepsCount: number }> {
         try {
@@ -484,7 +484,7 @@ export class PublicRecipeService {
                 throw new Error('Recipe not found');
             }
 
-            // 删除现有步骤（如果有）
+            // Delete existing steps (if any)
             if (recipe.steps && recipe.steps.length > 0) {
                 await this.dataSource.transaction(async (manager) => {
                     for (const step of recipe.steps) {
@@ -493,13 +493,13 @@ export class PublicRecipeService {
                 });
             }
 
-            // 转换步骤数据格式
+            // Convert step data format
             const stepsToSave = steps.map((step, idx) => ({
                 step_no: step.step_no || idx + 1,
                 content: step.content || (typeof step === 'string' ? step.trim() : String(step).trim()) || '-'
             }));
 
-            // 保存步骤到数据库
+            // Save steps to database
             await this.dataSource.transaction(async (manager) => {
                 for (const step of stepsToSave) {
                     const createdStep = manager.create(RecipeStep, {

@@ -29,7 +29,7 @@ export class UsersService {
             throw new ConflictException('This email is already registered');
         }
         
-        // 加密密码
+        // Hash password
         const hashedPassword = await bcrypt.hash(dto.password, 12);
         
         const u = this.repo.create({

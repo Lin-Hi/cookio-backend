@@ -72,7 +72,7 @@ export class AuthController {
             example: {
                 id: "123e4567-e89b-12d3-a456-426614174000",
                 email: "user@example.com",
-                display_name: "张三",
+                display_name: "John Doe",
                 avatar_url: null,
                 created_at: "2025-10-02T10:30:00.000Z"
             }
