@@ -50,5 +50,4 @@ npm run start:dev
 
 ### E. Access
 
-* 🚀 Server: [http://localhost:8080](http://localhost:8080)
 * 📚 Swagger: [http://localhost:8080/docs](http://localhost:8080/docs)
