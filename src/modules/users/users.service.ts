@@ -71,29 +71,21 @@ export class UsersService {
      * @returns Updated user without password
      */
     async updateProfile(userId: string, dto: UpdateProfileDto) {
-        console.log('[UpdateProfile Service] User ID:', userId);
-        console.log('[UpdateProfile Service] DTO:', dto);
-        
         const user = await this.repo.findOneByOrFail({ id: userId });
-        console.log('[UpdateProfile Service] Found user:', user.id);
-        
+
         // Update only provided fields
         if (dto.display_name !== undefined) {
             user.display_name = dto.display_name;
-            console.log('[UpdateProfile Service] Updated display_name:', dto.display_name);
         }
         if (dto.bio !== undefined) {
             user.bio = dto.bio;
-            console.log('[UpdateProfile Service] Updated bio:', dto.bio);
         }
         if (dto.avatar_url !== undefined) {
             user.avatar_url = dto.avatar_url;
-            console.log('[UpdateProfile Service] Updated avatar_url:', dto.avatar_url);
         }
 
         const updatedUser = await this.repo.save(user);
-        console.log('[UpdateProfile Service] User saved successfully');
-        
+
         // Return user without password
         const { password, ...userWithoutPassword } = updatedUser;
         return userWithoutPassword;
