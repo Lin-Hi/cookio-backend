@@ -68,8 +68,8 @@ export class PublicRecipeService {
         private readonly dataSource: DataSource,
     ) {}
 
-    private readonly EDAMAM_APP_ID = '428ba23e';
-    private readonly EDAMAM_APP_KEY = '4604940533a1b7f9d05b05e83bb77c33';
+    private readonly EDAMAM_APP_ID = 'd03db83e';
+    private readonly EDAMAM_APP_KEY = 'd700f1f543eb4781503c09d8c1214ee2';
     private readonly EDAMAM_BASE_URL = 'https://api.edamam.com/api/recipes/v2';
 
     private readonly SPOONACULAR_API_KEYS = [
