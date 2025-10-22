@@ -20,7 +20,7 @@ A mminimal runnable backend example implemented with**NestJS (TypeScript)** :
 
 ---
 
-## 1) Code Explanation(What eeach file does)
+## 1) Code Explanation(What each file does)
 
 ```
 src/
