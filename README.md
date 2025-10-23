@@ -1,4 +1,4 @@
-# Cookio Backend (NestJS + PostgreSQL + Redis)
+# Cookio Backend (NestJS + PostgreSQL + Redis
 
 ## 1) Environment Overview
 
