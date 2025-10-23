@@ -46,6 +46,7 @@ export class RecipesService {
         if (source) common.source = source;                 // default is 'community'
         if (typeof is_published === 'boolean') common.is_published = is_published;
         // when q exists, search title OR description using array "where" (OR)
+        // let is necessary: where condition needs to be reassigned based on search query
         let where: any = common;
         if (q) {
             const like = ILike(`%${q}%`);

@@ -68,8 +68,8 @@ export class PublicRecipeService {
         private readonly dataSource: DataSource,
     ) {}
 
-    private readonly EDAMAM_APP_ID = '428ba23e';
-    private readonly EDAMAM_APP_KEY = '4604940533a1b7f9d05b05e83bb77c33';
+    private readonly EDAMAM_APP_ID = 'd03db83e';
+    private readonly EDAMAM_APP_KEY = 'd700f1f543eb4781503c09d8c1214ee2';
     private readonly EDAMAM_BASE_URL = 'https://api.edamam.com/api/recipes/v2';
 
     private readonly SPOONACULAR_API_KEYS = [
@@ -226,6 +226,7 @@ export class PublicRecipeService {
         // If no recipeId provided, generate a temporary one
         const id = recipeId || 'recipe';
         
+        // let is necessary: attempts counter needs to be modified in the loop
         let attempts = 0;
         const maxAttempts = this.SPOONACULAR_API_KEYS.length;
         
@@ -267,13 +268,11 @@ export class PublicRecipeService {
                 
                 // Check if 402 error (quota exhausted)
                 if (axios.isAxiosError(error) && error.response?.status === 402) {
-                    console.warn(`API key ${this.getCurrentApiKey()} quota exceeded, switching to next key...`);
-                    
+
                     // Switch to next API key
                     const allKeysUsed = this.switchToNextApiKey();
                     
                     if (allKeysUsed) {
-                        console.error('All Spoonacular API keys have been exhausted');
                         return [];
                     }
                     
@@ -282,13 +281,11 @@ export class PublicRecipeService {
                 }
                 
                 // Other errors, log and return empty array
-                console.error('Failed to fetch steps from Spoonacular:', error);
                 return [];
             }
         }
         
         // If all keys have been tried, return empty array
-        console.error('All API keys exhausted, returning empty steps');
         return [];
     }
 
@@ -368,6 +365,7 @@ export class PublicRecipeService {
                 .returning(['id']) // PG can return id; if DO NOTHING, no row returned
                 .execute();
 
+            // let is necessary: recipeId needs to be reassigned in the conditional block
             let recipeId: string | undefined = insertResult.identifiers?.[0]?.id || insertResult.generatedMaps?.[0]?.id;
 
             // 3) If DO NOTHING due to concurrency, recheck existing record
@@ -384,6 +382,7 @@ export class PublicRecipeService {
             // Ingredients (only write on first insert; simple check: if passed ingredients and current DB has 0)
             const ingCount = await manager.count(RecipeIngredient, { where: { recipe: { id: recipeId } } });
             if (ingCount === 0 && (dto.ingredients?.length ?? 0) > 0) {
+                // let is necessary: loop counter 'i' is used as position in the database
                 for (let i = 0; i < dto.ingredients.length; i++) {
                     const ing = dto.ingredients[i];
                     await manager.save(
@@ -402,6 +401,7 @@ export class PublicRecipeService {
             const stepCount = await manager.count(RecipeStep, { where: { recipe: { id: recipeId } } });
             if (stepCount === 0 && dto.steps && dto.steps.length > 0) {
                 dto.steps.sort((a, b) => (a.number ?? 0) - (b.number ?? 0));
+                // let is necessary: loop counter 'i' is used to calculate step_no fallback
                 for (let i = 0; i < dto.steps.length; i++) {
                     const stepNo = Number.isFinite(Number(dto.steps[i].number)) ? Number(dto.steps[i].number) : i + 1;
                     const content = (dto.steps[i].instruction ?? '').toString().trim() || '-';
@@ -451,6 +451,7 @@ export class PublicRecipeService {
                 await manager.delete(RecipeStep, { recipe: { id: recipeId } });
                 
                 // Insert new steps
+                // let is necessary: loop counter 'idx' is used to calculate step_no fallback
                 for (let idx = 0; idx < fetchedSteps.length; idx++) {
                     const step = fetchedSteps[idx];
                     const stepData = {

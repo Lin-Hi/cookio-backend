@@ -18,6 +18,7 @@ export class AppService {
         const DEMO_EMAIL = 'demo@cookio.app';
 
         // ensure there is a demo user in the database (by email)
+            // let is necessary: user needs to be reassigned if not found (create new user)
         let user = await this.userRepo.findOne({ where: { email: DEMO_EMAIL } });
         if (!user) {
             user = this.userRepo.create({
