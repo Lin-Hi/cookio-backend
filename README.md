@@ -1,5 +1,15 @@
 # Cookio Backend (NestJS + PostgreSQL + Redis
 
+## Project Introduction
+- **Recipes Seeker** - UUsers can browse and discover great recipes from an official list or the community.
+- **Create Recipes** - Users can create their own recipes and publish them to the community or keep them private.
+- **Meals Management Tool** - Users can manage their pantry. When they add recipes to their queue, our website will automatically generate a shopping list.
+
+## Visit link:
+- **Front end website:** [https://tsuki-world.com](https://tsuki-world.com)
+- **Host server:** [https://tsuki-world.com/api](https://tsuki-world.com/api)
+- **Swagger docs:** [https://tsuki-world.com/api/docs](https://tsuki-world.com/api/docs)
+
 ## 1) Environment Overview
 
 * Node.js 18+ (recommended versions: 18 / 20 / 22)
